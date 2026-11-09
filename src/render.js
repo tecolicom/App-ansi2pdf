@@ -51,67 +51,133 @@ function colors(cell) {
   return { fg, bg };
 }
 
-function pageSize(opt) {
+// columns x rows of logical pages on a sheet, and the default orientation
+const UP = {
+  1: [1, 1, false], 2: [2, 1, true], 3: [3, 1, true], 4: [2, 2, false],
+  6: [2, 3, false], 8: [4, 2, true], 9: [3, 3, false],
+};
+
+function sheetLayout(opt) {
+  let gc, gr, land;
+  if (opt.grid) {
+    const m = /^(\d+)x(\d+)$/i.exec(opt.grid);
+    if (!m) throw new Error(`bad grid: ${opt.grid}`);
+    [gc, gr] = [Number(m[1]), Number(m[2])];
+    land = gc > gr;
+  } else {
+    const up = opt.up || 1;
+    if (!UP[up]) throw new Error(`unsupported --up ${up}; use --grid`);
+    [gc, gr, land] = UP[up];
+  }
+  if (opt.landscape !== undefined) land = opt.landscape;
   let [w, h] = PAPER[(opt.paper || 'a4').toLowerCase()] ?? PAPER.a4;
-  if (opt.landscape) [w, h] = [h, w];
-  return [w, h];
+  if (land) [w, h] = [h, w];
+  return { gc, gr, size: [w, h] };
 }
 
-function render(screen, out, opt = {}) {
-  const doc = new PDFDocument({ size: pageSize(opt), margin: 0, autoFirstPage: false });
-  doc.pipe(out);
-  doc.registerFont('R', opt.font);
-  doc.registerFont('B', opt.boldFont || opt.font);
-
-  const [pw, ph] = pageSize(opt);
+// Compute the font size, the cell size and the position of each logical page.
+function layout(doc, screen, opt) {
+  const { gc, gr, size: [pw, ph] } = sheetLayout(opt);
   const margin = (opt.margin ?? 10) * MM;
+  const gap = (opt.gap ?? 6) * MM;
+  const pad = opt.border ? (opt.padding ?? 2) * MM : 0;
   const lineHeight = opt.lineHeight ?? 1.2;
-  const availW = pw - margin * 2, availH = ph - margin * 2;
 
-  // advance of a half-width character, relative to the font size
+  // slot: area of one logical page, including its header and border
+  const slotW = (pw - margin * 2 - gap * (gc - 1)) / gc;
+  const slotH = (ph - margin * 2 - gap * (gr - 1)) / gr;
+  const headerFs = opt.header ? Math.min(10, Math.max(6, slotH / 60)) : 0;
+  const headerH = opt.header ? headerFs * 1.8 : 0;
+  // text area inside the border
+  const textW = slotW - pad * 2, textH = slotH - headerH - pad * 2;
+
   doc.font('R').fontSize(1000);
   const half = doc.widthOfString('M') / 1000;
   const { ascender, descender } = doc._font;
 
-  const cols = screen.cols;
   let fs = opt.fontSize;
   if (!fs) {
-    fs = availW / (cols * half);
-    if (opt.lines) fs = Math.min(fs, availH / (opt.lines * lineHeight));
+    fs = textW / (screen.cols * half);
+    if (opt.lines) fs = Math.min(fs, textH / (opt.lines * lineHeight));
     else fs = Math.min(fs, opt.maxFontSize ?? 12);
   }
   const cw = fs * half, ch = fs * lineHeight;
-  const perPage = opt.lines || Math.max(1, Math.floor(availH / ch));
-  const lw = Math.max(0.3, fs * 0.07);
-  // baseline offset from the top of a cell: center the font box vertically
+  const perPage = opt.lines || Math.max(1, Math.floor(textH / ch));
   const boxH = (ascender - descender) * fs / 1000;
-  const base = (ch - boxH) / 2 + ascender * fs / 1000;
-  // align the grid to the left-top of the printable area
-  const ox = margin, oy = margin;
 
+  const slots = [];
+  for (let r = 0; r < gr; r++) {
+    for (let c = 0; c < gc; c++) {
+      const x = margin + c * (slotW + gap), y = margin + r * (slotH + gap);
+      // the border fits the text, not the whole slot, when the text is smaller
+      const bw = screen.cols * cw + pad * 2, bh = perPage * ch + pad * 2;
+      slots.push({
+        header: { x, y, w: bw, h: headerH, fs: headerFs },
+        border: { x, y: y + headerH, w: bw, h: bh },
+        text: { x: x + pad, y: y + headerH + pad },
+      });
+    }
+  }
+  return {
+    size: [pw, ph], slots, fs, cw, ch, perPage,
+    lw: Math.max(0.3, fs * 0.07),
+    base: (ch - boxH) / 2 + ascender * fs / 1000,     // baseline offset in a cell
+  };
+}
+
+function render(screen, out, opt = {}) {
+  const doc = new PDFDocument({ margin: 0, autoFirstPage: false });
+  doc.pipe(out);
+  doc.registerFont('R', opt.font);
+  doc.registerFont('B', opt.boldFont || opt.font);
+
+  const L = layout(doc, screen, opt);
   const lines = screen.lines.length ? screen.lines : [[]];
-  for (let p = 0; p < lines.length; p += perPage) {
-    doc.addPage();
-    const page = lines.slice(p, p + perPage);
-    // backgrounds first, so that glyphs and lines are drawn over them
-    page.forEach((cells, row) => {
-      const y = oy + row * ch;
-      cells.forEach((cell, col) => {
-        if (cell.width === 0) return;
-        const { bg } = colors(cell);
-        if (bg) doc.rect(ox + col * cw, y, cw * cell.width + 0.1, ch + 0.1).fill(bg);
-      });
-    });
-    page.forEach((cells, row) => {
-      const y = oy + row * ch;
-      cells.forEach((cell, col) => {
-        if (cell.width === 0) return;
-        drawCell(doc, cell, ox + col * cw, y, cw * cell.width, { fs, ch, lw, base });
-      });
-    });
+  const total = Math.ceil(lines.length / L.perPage);
+  for (let n = 0; n < total; n++) {
+    const slot = L.slots[n % L.slots.length];
+    if (n % L.slots.length === 0) doc.addPage({ size: L.size, margin: 0 });
+    drawPage(doc, lines.slice(n * L.perPage, (n + 1) * L.perPage), slot.text, L);
+    if (opt.border) {
+      const b = slot.border;
+      doc.save().lineWidth(Math.max(0.5, L.lw)).strokeColor(INK_COLOR)
+        .rect(b.x, b.y, b.w, b.h).stroke().restore();
+    }
+    if (opt.header) drawHeader(doc, slot.header, opt.title ?? '', `${n + 1} / ${total}`);
   }
   doc.end();
-  return { fontSize: fs, linesPerPage: perPage, pages: Math.ceil(lines.length / perPage) };
+  return {
+    fontSize: L.fs, linesPerPage: L.perPage, pages: total,
+    sheets: Math.ceil(total / L.slots.length),
+  };
+}
+
+function drawPage(doc, page, origin, L) {
+  const m = { fs: L.fs, ch: L.ch, lw: L.lw, base: L.base };
+  // backgrounds first, so that glyphs and lines are drawn over them
+  page.forEach((cells, row) => {
+    const y = origin.y + row * L.ch;
+    cells.forEach((cell, col) => {
+      if (cell.width === 0) return;
+      const { bg } = colors(cell);
+      if (bg) doc.rect(origin.x + col * L.cw, y, L.cw * cell.width + 0.1, L.ch + 0.1).fill(bg);
+    });
+  });
+  page.forEach((cells, row) => {
+    const y = origin.y + row * L.ch;
+    cells.forEach((cell, col) => {
+      if (cell.width === 0) return;
+      drawCell(doc, cell, origin.x + col * L.cw, y, L.cw * cell.width, m);
+    });
+  });
+}
+
+function drawHeader(doc, h, left, right) {
+  const y = h.y + (h.h - h.fs) / 2;
+  doc.save().font('B').fontSize(h.fs).fillColor(INK_COLOR);
+  doc.text(left, h.x, y, { lineBreak: false });
+  doc.font('R').text(right, h.x + h.w - doc.widthOfString(right), y, { lineBreak: false });
+  doc.restore();
 }
 
 function drawCell(doc, cell, x, y, w, m) {

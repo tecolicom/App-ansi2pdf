@@ -15,6 +15,12 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
   -l, --lines N          lines per page (default: fit to the paper)
   -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4)
   -L, --landscape        landscape orientation
+  -U, --up N             logical pages per sheet: 1, 2, 3, 4, 6, 8, 9 (default: 1)
+      --grid CxR         arrange logical pages in C columns and R rows
+  -B, --border           draw a border around each logical page
+  -H, --header           print a header with the title and page number
+  -t, --title TEXT       title in the header (default: file name)
+      --gap MM           space between logical pages in mm (default: 6)
   -s, --font-size PT     font size (default: fit to the paper)
   -m, --margin MM        margin in mm (default: 10)
       --line-height R    line height relative to the font size (default: 1.2)
@@ -45,6 +51,12 @@ async function main() {
       lines: { type: 'string', short: 'l' },
       paper: { type: 'string', short: 'p', default: 'a4' },
       landscape: { type: 'boolean', short: 'L' },
+      up: { type: 'string', short: 'U' },
+      grid: { type: 'string' },
+      border: { type: 'boolean', short: 'B' },
+      header: { type: 'boolean', short: 'H' },
+      title: { type: 'string', short: 't' },
+      gap: { type: 'string' },
       'font-size': { type: 'string', short: 's' },
       margin: { type: 'string', short: 'm' },
       'line-height': { type: 'string' },
@@ -71,13 +83,15 @@ async function main() {
   const out = o.output ? fs.createWriteStream(o.output) : process.stdout;
   const info = render(screen, out, {
     paper: o.paper, landscape: o.landscape, lines: num(o.lines),
+    up: num(o.up), grid: o.grid, border: o.border, header: o.header, gap: num(o.gap),
+    title: o.title ?? (files.length === 1 ? path.basename(files[0]) : ''),
     fontSize: num(o['font-size']), margin: num(o.margin), lineHeight: num(o['line-height']),
     font, boldFont,
   });
   if (o.output) {
     await new Promise((r) => out.on('finish', r));
     process.stderr.write(`${o.output}: ${screen.cols} cols, ${info.linesPerPage} lines/page, `
-      + `${info.pages} page(s), ${info.fontSize.toFixed(2)}pt\n`);
+      + `${info.pages} page(s) on ${info.sheets} sheet(s), ${info.fontSize.toFixed(2)}pt\n`);
   }
 }
 
