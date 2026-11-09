@@ -1,0 +1,18 @@
+{
+  "name": "ansi2pdf",
+  "version": "0.1.0",
+  "description": "Render terminal output with ANSI sequences to PDF",
+  "main": "src/render.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "author": "Kazumasa Utashiro",
+  "dependencies": {
+    "@xterm/headless": "^6.0.0",
+    "pdfkit": "^0.20.2"
+  },
+  "private": true,
+  "bin": {
+    "ansi2pdf": "bin/ansi2pdf.js"
+  }
+}
