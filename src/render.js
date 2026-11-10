@@ -109,8 +109,10 @@ function layout(doc, screen, opt) {
   for (let r = 0; r < gr; r++) {
     for (let c = 0; c < gc; c++) {
       const x = margin + c * (slotW + gap), y = margin + r * (slotH + gap);
-      // the border fits the text, not the whole slot, when the text is smaller
-      const bw = screen.cols * cw + pad * 2, bh = perPage * ch + pad * 2;
+      // the border is the whole slot, like a page reduced by a printer driver;
+      // smaller text leaves space inside it
+      const bw = Math.max(slotW, screen.cols * cw + pad * 2);
+      const bh = Math.max(slotH - headerH, perPage * ch + pad * 2);
       slots.push({
         header: { x, y, w: bw, h: headerH, fs: headerFs },
         border: { x, y: y + headerH, w: bw, h: bh },

@@ -15,9 +15,9 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
   -l, --lines N          lines per page (default: fit to the paper)
   -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4)
   -L, --landscape        landscape orientation
-  -U, --up N             logical pages per sheet: 1, 2, 3, 4, 6, 8, 9 (default: 1)
+  -U, --up N             logical pages per sheet: 1, 2, 3, 4, 6, 8, 9 (default: 2)
       --grid CxR         arrange logical pages in C columns and R rows
-  -B, --border           draw a border around each logical page
+  -B, --[no-]border      draw a border around each logical page (default: on)
   -H, --header           print a header with the title and page number
   -t, --title TEXT       title in the header (default: file name)
       --gap MM           space between logical pages in mm (default: 6)
@@ -45,15 +45,16 @@ function findFont(name) {
 async function main() {
   const { values: o, positionals: files } = parseArgs({
     allowPositionals: true,
+    allowNegative: true,
     options: {
       output: { type: 'string', short: 'o' },
       cols: { type: 'string', short: 'c' },
       lines: { type: 'string', short: 'l' },
       paper: { type: 'string', short: 'p', default: 'a4' },
       landscape: { type: 'boolean', short: 'L' },
-      up: { type: 'string', short: 'U' },
+      up: { type: 'string', short: 'U', default: '2' },
       grid: { type: 'string' },
-      border: { type: 'boolean', short: 'B' },
+      border: { type: 'boolean', short: 'B', default: true },
       header: { type: 'boolean', short: 'H' },
       title: { type: 'string', short: 't' },
       gap: { type: 'string' },
