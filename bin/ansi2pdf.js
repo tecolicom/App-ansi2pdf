@@ -6,12 +6,13 @@ const os = require('os');
 const path = require('path');
 const { parseArgs } = require('util');
 const { emulate } = require('../src/emulate');
-const { render, PAPER } = require('../src/render');
+const { render, columns, PAPER } = require('../src/render');
 
 const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
 
   -o, --output FILE      output file (default: stdout)
-  -w, --width N          width of a line in columns (default: measured from input)
+  -w, --width N          columns of a line; longer lines are wrapped as on a
+                         terminal (default: as many as fit the page)
   -l, --lines N          lines per page (default: 60)
   -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4)
   -L, --landscape        landscape orientation
@@ -77,17 +78,19 @@ async function main() {
     : fs.readFileSync(0, 'utf8');
 
   const num = (v) => (v === undefined ? undefined : Number(v));
-  const screen = await emulate(input, { cols: num(o.width) });
-
-  if (!o.output && process.stdout.isTTY) throw new Error('refusing to write PDF to a terminal; use -o');
-  const out = o.output ? fs.createWriteStream(o.output) : process.stdout;
-  const info = render(screen, out, {
-    paper: o.paper, landscape: o.landscape, lines: num(o.lines),
+  const opt = {
+    paper: o.paper, landscape: o.landscape, lines: num(o.lines), width: num(o.width),
     pane: o.pane, border: o.border, header: o.header, gap: num(o.gap),
     title: o.title ?? (files.length === 1 ? path.basename(files[0]) : ''),
     fontSize: num(o['font-size']), margin: num(o.margin), lineHeight: num(o['line-height']),
     font, boldFont,
-  });
+  };
+  // run the terminal with the width of a logical page, so that long lines wrap
+  const screen = await emulate(input, { cols: columns(opt) });
+
+  if (!o.output && process.stdout.isTTY) throw new Error('refusing to write PDF to a terminal; use -o');
+  const out = o.output ? fs.createWriteStream(o.output) : process.stdout;
+  const info = render(screen, out, opt);
   if (o.output) {
     await new Promise((r) => out.on('finish', r));
     process.stderr.write(`${o.output}: ${screen.cols} cols, ${info.linesPerPage} lines/page, `

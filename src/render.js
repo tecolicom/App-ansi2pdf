@@ -69,7 +69,10 @@ function sheetLayout(opt) {
 }
 
 // Compute the font size, the cell size and the position of each logical page.
-function layout(doc, screen, opt) {
+// The font size comes from the lines per page, as in printing text on a
+// printer, and the width of a logical page gives the number of columns.
+// When opt.width is given, the font is made smaller to fit that many columns.
+function layout(doc, opt) {
   const { gc, gr, size: [pw, ph] } = sheetLayout(opt);
   const margin = (opt.margin ?? 10) * MM;
   const gap = (opt.gap ?? 6) * MM;
@@ -90,11 +93,11 @@ function layout(doc, screen, opt) {
 
   let fs = opt.fontSize;
   if (!fs) {
-    fs = textW / (screen.cols * half);
-    if (opt.lines) fs = Math.min(fs, textH / (opt.lines * lineHeight));
-    else fs = Math.min(fs, opt.maxFontSize ?? 12);
+    fs = opt.lines ? textH / (opt.lines * lineHeight) : opt.maxFontSize ?? 12;
+    if (opt.width) fs = Math.min(fs, textW / (opt.width * half));
   }
   const cw = fs * half, ch = fs * lineHeight;
+  const cols = opt.width || Math.max(1, Math.floor(textW / cw + 1e-6));
   const perPage = opt.lines || Math.max(1, Math.floor(textH / ch));
   const boxH = (ascender - descender) * fs / 1000;
 
@@ -104,7 +107,7 @@ function layout(doc, screen, opt) {
       const x = margin + c * (slotW + gap), y = margin + r * (slotH + gap);
       // the border is the whole slot, like a page reduced by a printer driver;
       // smaller text leaves space inside it
-      const bw = Math.max(slotW, screen.cols * cw + pad * 2);
+      const bw = Math.max(slotW, cols * cw + pad * 2);
       const bh = Math.max(slotH - headerH, perPage * ch + pad * 2);
       slots.push({
         header: { x, y, w: bw, h: headerH, fs: headerFs },
@@ -114,10 +117,17 @@ function layout(doc, screen, opt) {
     }
   }
   return {
-    size: [pw, ph], slots, fs, cw, ch, perPage,
+    size: [pw, ph], slots, fs, cw, ch, cols, perPage,
     lw: Math.max(0.3, fs * 0.07),
     base: (ch - boxH) / 2 + ascender * fs / 1000,     // baseline offset in a cell
   };
+}
+
+// number of columns of a logical page, to run the terminal emulator with
+function columns(opt) {
+  const doc = new PDFDocument({ autoFirstPage: false });
+  doc.registerFont('R', opt.font);
+  return layout(doc, opt).cols;
 }
 
 function render(screen, out, opt = {}) {
@@ -126,7 +136,7 @@ function render(screen, out, opt = {}) {
   doc.registerFont('R', opt.font);
   doc.registerFont('B', opt.boldFont || opt.font);
 
-  const L = layout(doc, screen, opt);
+  const L = layout(doc, opt);
   const lines = screen.lines.length ? screen.lines : [[]];
   const total = Math.ceil(lines.length / L.perPage);
   for (let n = 0; n < total; n++) {
@@ -227,4 +237,4 @@ function drawUnderline(doc, style, x, y, w, lw, color) {
   doc.restore();
 }
 
-module.exports = { render, PAPER };
+module.exports = { render, columns, PAPER };
