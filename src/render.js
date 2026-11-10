@@ -279,8 +279,10 @@ function drawCell(doc, cell, x, y, w, m, room = 0) {
   if (cell.overline) line(y + m.lw, fg, m.lw);
 }
 
-// Glyphs narrower than this ratio of the room are shrunk keeping the shape.
+// Glyphs narrower than this ratio of the room are shrunk keeping the shape,
+// to this ratio of the room in width.
 const MIN_SQUEEZE = 0.75;
+const OVERFLOW = 1.2;
 
 function drawGlyph(doc, cell, text, x, y, w, m, fg, room = 0) {
   doc.font(m.fonts.pick(text, cell.bold)).fontSize(m.fs).fillColor(fg);
@@ -295,9 +297,13 @@ function drawGlyph(doc, cell, text, x, y, w, m, fg, room = 0) {
     doc.transform(avail / adv, 0, -skew, 1, x, y + m.base);
   } else {
     // much wider, such as a full-width glyph in one cell: shrink in both
-    // directions to keep the shape, centered in the cell
-    const s = avail / adv;
-    doc.transform(s, 0, -skew * s, s, x, y + m.ch / 2 + (m.base - m.ch / 2) * s);
+    // directions to keep the shape, centered on the line; it may extend a
+    // little over the cells on both sides not to be too small
+    // around the middle of the capital height, to line up with letters
+    const s = avail * OVERFLOW / adv;
+    const mid = (doc._font.capHeight || 700) * m.fs / 1000 / 2;
+    doc.transform(s, 0, -skew * s, s, x + avail * (1 - OVERFLOW) / 2,
+                  y + m.base - mid * (1 - s));
   }
   doc.text(text, 0, 0, { lineBreak: false, baseline: 'alphabetic' });
   doc.restore();
