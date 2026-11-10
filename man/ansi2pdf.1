@@ -35,6 +35,9 @@ The length of the lines does not change the font size, unless
 .PP
 A form feed (\f[B]\(haL\f[R]) starts a new page.
 Consecutive form feeds make a blank page.
+Clearing the screen (\f[B]ESC [ 2 J\f[R], as by \f[B]clear\f[R](1)) also
+starts a new page, keeping what was on the screen before it.
+Clearing the scrollback (\f[B]ESC [ 3 J\f[R]) is ignored.
 .PP
 Files are read in order and concatenated.
 Without files, the standard input is read.

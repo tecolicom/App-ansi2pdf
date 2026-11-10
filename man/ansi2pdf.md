@@ -39,7 +39,9 @@ on a terminal.  The length of the lines does not change the font size,
 unless **--width** is given.
 
 A form feed (**^L**) starts a new page.  Consecutive form feeds make a
-blank page.
+blank page.  Clearing the screen (**ESC [ 2 J**, as by **clear**(1))
+also starts a new page, keeping what was on the screen before it.
+Clearing the scrollback (**ESC [ 3 J**) is ignored.
 
 Files are read in order and concatenated.  Without files, the standard
 input is read.  The PDF is written to the standard output, or to the

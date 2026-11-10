@@ -46,3 +46,13 @@ test('form feeds are page breaks', async () => {
   const c = await emulate('\fa\n\f\fb\n\f', { cols: 10 });
   assert.deepStrictEqual([rows(c), c.breaks], [['a', 'b'], [1, 1]]);
 });
+
+test('clearing the screen starts a new page', async () => {
+  const rows = (s) => s.lines.map((l) => l.map((c) => c.ch || ' ').join('').trimEnd());
+  const clear = '\x1b[3J\x1b[H\x1b[2J';
+  const many = Array.from({ length: 30 }, (_, i) => `L${i + 1}`).join('\n') + '\n';
+  const a = await emulate(many + clear + 'c\n', { cols: 10 });
+  assert.deepStrictEqual([a.lines.length, rows(a)[0], rows(a)[30], a.breaks], [31, 'L1', 'c', [30]]);
+  const b = await emulate(clear + 'a\n' + clear + 'b\n' + clear + '\fc\n', { cols: 10 });
+  assert.deepStrictEqual([rows(b), b.breaks], [['a', 'b', 'c'], [1, 2]]);
+});

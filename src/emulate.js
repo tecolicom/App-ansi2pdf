@@ -47,15 +47,33 @@ function write(term, data) {
 // the beginning of a line, the line it leaves empty is dropped.
 const FF_OSC = 7770;
 
+// Clearing the screen (ED2, \e[2J) also starts a new page: what was on
+// the screen is pushed up and kept (scrollOnEraseInDisplay), and the new
+// screen starts on a new page.  Clearing the scrollback (ED3, \e[3J) is
+// ignored, not to lose the output on paper.
 async function run(input, cols) {
   const term = new Terminal({
     cols, rows: 24, scrollback: 1e7, convertEol: true, allowProposedApi: true,
+    scrollOnEraseInDisplay: true,
   });
+  // breaks: { start: row where a new page starts, drop: row to remove }
   const breaks = [];
   term.parser.registerOscHandler(FF_OSC, () => {
     const buf = term.buffer.active;
-    breaks.push({ row: buf.baseY + buf.cursorY, drop: buf.cursorX === 0 });
+    const row = buf.baseY + buf.cursorY;
+    breaks.push({ start: row + 1, drop: buf.cursorX === 0 ? row : null, ff: true });
     return true;
+  });
+  term.parser.registerCsiHandler({ final: 'J' }, (params) => {
+    if (params[0] === 3) return true;
+    if (params[0] === 2) {
+      // the erased text is pushed up to the last row that has something
+      const buf = term.buffer.active;
+      let last = term.rows - 1;
+      while (last >= 0 && !buf.getLine(buf.baseY + last).translateToString(true)) last--;
+      if (last >= 0) breaks.push({ start: buf.baseY + last + 1, drop: null, ff: false });
+    }
+    return false;
   });
   await write(term, input.replace(/\f/g, `\x1b]${FF_OSC};\x07\f`));
   term.breaks = breaks;
@@ -101,9 +119,18 @@ async function emulate(input, options = {}) {
   const term = await run(input, cols);
   let lines = grid(term);
   // drop the rows left empty by form feeds, and find where pages start
-  const drop = new Set(term.breaks.filter((b) => b.drop).map((b) => b.row));
+  const drop = new Set(term.breaks.filter((b) => b.drop !== null).map((b) => b.drop));
   const dropped = (row) => [...drop].filter((r) => r < row).length;
-  const breaks = term.breaks.map((b) => b.row + 1 - dropped(b.row + 1));
+  // consecutive form feeds make a blank page, but a break by clearing the
+  // screen at the same place as another break is the same break
+  const breaks = [];
+  let prev = null;
+  for (const b of term.breaks) {
+    const start = b.start - dropped(b.start);
+    if (prev && prev.start === start && !(prev.ff && b.ff)) continue;
+    breaks.push(start);
+    prev = { start, ff: b.ff };
+  }
   lines = lines.filter((_, row) => !drop.has(row));
   return { cols, lines, breaks: breaks.filter((r) => r > 0 && r < lines.length) };
 }
