@@ -11,12 +11,12 @@ const { render, PAPER } = require('../src/render');
 const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
 
   -o, --output FILE      output file (default: stdout)
-  -c, --cols N           columns (default: measured from input)
+  -w, --width N          width of a line in columns (default: measured from input)
   -l, --lines N          lines per page (default: 60)
   -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4)
   -L, --landscape        landscape orientation
-  -U, --up N             logical pages per sheet: 1, 2, 3, 4, 6, 8, 9 (default: 2)
-      --grid CxR         arrange logical pages in C columns and R rows
+  -C, --pane C[.R]       logical pages on a sheet in C columns and R rows,
+                         as 2 or 2.2 (default: 2)
   -B, --[no-]border      draw a border around each logical page (default: on)
   -H, --header           print a header with the title and page number
   -t, --title TEXT       title in the header (default: file name)
@@ -48,12 +48,11 @@ async function main() {
     allowNegative: true,
     options: {
       output: { type: 'string', short: 'o' },
-      cols: { type: 'string', short: 'c' },
+      width: { type: 'string', short: 'w' },
       lines: { type: 'string', short: 'l', default: '60' },
       paper: { type: 'string', short: 'p', default: 'a4' },
       landscape: { type: 'boolean', short: 'L' },
-      up: { type: 'string', short: 'U', default: '2' },
-      grid: { type: 'string' },
+      pane: { type: 'string', short: 'C', default: '2' },
       border: { type: 'boolean', short: 'B', default: true },
       header: { type: 'boolean', short: 'H' },
       title: { type: 'string', short: 't' },
@@ -78,13 +77,13 @@ async function main() {
     : fs.readFileSync(0, 'utf8');
 
   const num = (v) => (v === undefined ? undefined : Number(v));
-  const screen = await emulate(input, { cols: num(o.cols) });
+  const screen = await emulate(input, { cols: num(o.width) });
 
   if (!o.output && process.stdout.isTTY) throw new Error('refusing to write PDF to a terminal; use -o');
   const out = o.output ? fs.createWriteStream(o.output) : process.stdout;
   const info = render(screen, out, {
     paper: o.paper, landscape: o.landscape, lines: num(o.lines),
-    up: num(o.up), grid: o.grid, border: o.border, header: o.header, gap: num(o.gap),
+    pane: o.pane, border: o.border, header: o.header, gap: num(o.gap),
     title: o.title ?? (files.length === 1 ? path.basename(files[0]) : ''),
     fontSize: num(o['font-size']), margin: num(o.margin), lineHeight: num(o['line-height']),
     font, boldFont,

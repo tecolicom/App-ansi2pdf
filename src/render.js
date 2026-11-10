@@ -51,25 +51,18 @@ function colors(cell) {
   return { fg, bg };
 }
 
-// columns x rows of logical pages on a sheet, and the default orientation
-const UP = {
-  1: [1, 1, false], 2: [2, 1, true], 3: [3, 1, true], 4: [2, 2, false],
-  6: [2, 3, false], 8: [4, 2, true], 9: [3, 3, false],
-};
+// Logical pages on a sheet, given as "C" or "C.R": C columns and R rows.
+function parsePane(v) {
+  const m = /^(\d+)(?:\.(\d+))?$/.exec(String(v));
+  const [c, r] = m ? [Number(m[1]), Number(m[2] ?? 1)] : [0, 0];
+  if (!(c >= 1 && r >= 1)) throw new Error(`bad pane: ${v}`);
+  return [c, r];
+}
 
+// The sheet is landscape when there are more columns than rows.
 function sheetLayout(opt) {
-  let gc, gr, land;
-  if (opt.grid) {
-    const m = /^(\d+)x(\d+)$/i.exec(opt.grid);
-    if (!m) throw new Error(`bad grid: ${opt.grid}`);
-    [gc, gr] = [Number(m[1]), Number(m[2])];
-    land = gc > gr;
-  } else {
-    const up = opt.up || 1;
-    if (!UP[up]) throw new Error(`unsupported --up ${up}; use --grid`);
-    [gc, gr, land] = UP[up];
-  }
-  if (opt.landscape !== undefined) land = opt.landscape;
+  const [gc, gr] = parsePane(opt.pane ?? 1);
+  const land = opt.landscape ?? gc > gr;
   let [w, h] = PAPER[(opt.paper || 'a4').toLowerCase()] ?? PAPER.a4;
   if (land) [w, h] = [h, w];
   return { gc, gr, size: [w, h] };
