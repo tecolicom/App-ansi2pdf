@@ -20,8 +20,9 @@ ansi2pdf - render terminal output with ANSI sequences to PDF
 **ansi2pdf** reads the output of a command, as it would be shown on a
 terminal, and prints it to a PDF file.  Colors, bold, faint, italic,
 underlines of every style and color, reverse video, strikethrough and
-overline are kept.  Box drawing characters are drawn as lines, so that
-tables and borders are connected on paper.
+overline are kept.  Box drawing characters are drawn as lines, and block
+elements (U+2580 to U+259F) as filled rectangles, so that tables and
+borders are connected on paper.
 
 The input is interpreted by a terminal emulator (xterm.js, the engine of
 the Visual Studio Code terminal), so cursor movement, erasing to the end

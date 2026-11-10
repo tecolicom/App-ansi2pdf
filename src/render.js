@@ -2,7 +2,7 @@
 // Render a grid of terminal cells to PDF with pdfkit.
 
 const PDFDocument = require('pdfkit');
-const { isBox, drawBox } = require('./boxdraw');
+const { isBox, drawBox, blockOf } = require('./boxdraw');
 
 const MM = 72 / 25.4;
 const PAPER = {
@@ -216,6 +216,28 @@ function drawPage(doc, page, origin, L) {
     }
     doc.fill(bg);
   }
+  // Block elements are filled as rectangles, as terminals do, also as one
+  // path per color.  Font glyphs of them do not fill the cell.
+  const blocks = new Map();
+  page.forEach((cells, row) => {
+    cells.forEach((cell, col) => {
+      const b = cell.width && !cell.invisible && blockOf(cell.ch);
+      if (!b) return;
+      const { fg, bg } = colors(cell);
+      const color = b.shade < 1 ? mix(bg ?? PAPER_COLOR, fg, b.shade) : fg;
+      const x = origin.x + col * L.cw, y = origin.y + row * L.ch, w = L.cw * cell.width;
+      const list = blocks.get(color) ?? blocks.set(color, []).get(color);
+      // extend edges on the cell boundary a little, to join the next cell
+      for (const [x0, y0, x1, y1] of b.rects) {
+        list.push([x + x0 * w, y + y0 * L.ch, (x1 - x0) * w + (x1 === 1 ? 0.1 : 0),
+                   (y1 - y0) * L.ch + (y1 === 1 ? 0.1 : 0)]);
+      }
+    });
+  });
+  for (const [color, list] of blocks) {
+    for (const r of list) doc.rect(...r);
+    doc.fill(color);
+  }
   page.forEach((cells, row) => {
     const y = origin.y + row * L.ch;
     cells.forEach((cell, col) => {
@@ -236,7 +258,7 @@ function drawHeader(doc, h, left, right) {
 function drawCell(doc, cell, x, y, w, m) {
   const { fg } = colors(cell);
   const text = cell.ch;
-  if (text && text !== ' ' && !cell.invisible) {
+  if (text && text !== ' ' && !cell.invisible && !blockOf(text)) {
     if (!(isBox(text) && drawBox(doc, text, x, y, w, m.ch, m.lw, fg))) {
       drawGlyph(doc, cell, text, x, y, w, m, fg);
     }

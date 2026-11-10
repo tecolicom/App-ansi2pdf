@@ -83,4 +83,27 @@ function drawBox(doc, ch, x, y, w, h, lw, color) {
   return true;
 }
 
-module.exports = { isBox, drawBox };
+// Block elements (U+2580..U+259F) as rectangles in a cell, in fractions
+// of the cell: [x0, y0, x1, y1].  Shades are a full cell with a density.
+const BLOCK = new Map();
+{
+  const q = { UL: [0, 0, 0.5, 0.5], UR: [0.5, 0, 1, 0.5], LL: [0, 0.5, 0.5, 1], LR: [0.5, 0.5, 1, 1] };
+  const set = (cp, rects, shade = 1) => BLOCK.set(String.fromCodePoint(cp), { rects, shade });
+  set(0x2580, [[0, 0, 1, 0.5]]);
+  for (let n = 1; n <= 8; n++) set(0x2580 + n, [[0, 1 - n / 8, 1, 1]]);   // lower n/8, 2588 is full
+  for (let n = 7; n >= 1; n--) set(0x2589 + 7 - n, [[0, 0, n / 8, 1]]);   // left n/8
+  set(0x2590, [[0.5, 0, 1, 1]]);
+  set(0x2591, [[0, 0, 1, 1]], 0.25);
+  set(0x2592, [[0, 0, 1, 1]], 0.5);
+  set(0x2593, [[0, 0, 1, 1]], 0.75);
+  set(0x2594, [[0, 0, 1, 1 / 8]]);
+  set(0x2595, [[7 / 8, 0, 1, 1]]);
+  const quads = ['LL', 'LR', 'UL', 'UL LL LR', 'UL LR', 'UL UR LL', 'UL UR LR', 'UR', 'UR LL', 'UR LL LR'];
+  quads.forEach((s, i) => set(0x2596 + i, s.split(' ').map((k) => q[k])));
+}
+
+function blockOf(ch) {
+  return BLOCK.get(ch) ?? null;
+}
+
+module.exports = { isBox, drawBox, blockOf };
