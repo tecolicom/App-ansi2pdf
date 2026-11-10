@@ -15,7 +15,8 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
                          terminal (default: as many as fit the page)
   -l, --lines N          lines per page (default: 60)
   -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4)
-  -L, --landscape        landscape orientation
+  -L, --[no-]landscape   landscape or portrait (default: landscape when there
+                         are more columns than rows in -C)
   -C, --pane C[.R]       logical pages on a sheet in C columns and R rows,
                          as 2 or 2.2 (default: 2)
   -B, --[no-]border      draw a border around each logical page (default: on)
