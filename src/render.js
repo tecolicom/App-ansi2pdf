@@ -130,13 +130,45 @@ function columns(opt) {
   return layout(doc, opt).cols;
 }
 
+// Choose the font for a character: the main font if it has the glyph,
+// otherwise the first fallback font that has it.  Characters that no font
+// has are counted in `missing` and drawn with the main font.
+function fontPicker(doc, fallbacks = []) {
+  const names = fallbacks.map((f, i) => {
+    doc.registerFont(`F${i}`, f.src, f.family);
+    return `F${i}`;
+  });
+  const has = (name, cps) => {
+    doc.font(name);
+    return cps.every((cp) => doc._font.font.hasGlyphForCodePoint(cp));
+  };
+  const cache = new Map(), missing = new Map();
+  return {
+    missing,
+    pick(text, bold) {
+      const main = bold ? 'B' : 'R', key = main + text;
+      if (!cache.has(key)) {
+        // variation selectors and joiners are not glyphs to look for
+        const cps = [...text].map((c) => c.codePointAt(0))
+          .filter((cp) => !(cp >= 0xfe00 && cp <= 0xfe0f) && cp !== 0x200d);
+        cache.set(key, has(main, cps) ? main : names.find((n) => has(n, cps)) ?? null);
+      }
+      const name = cache.get(key);
+      if (name === null) missing.set(text, (missing.get(text) ?? 0) + 1);
+      return name ?? main;
+    },
+  };
+}
+
 function render(screen, out, opt = {}) {
   const doc = new PDFDocument({ margin: 0, autoFirstPage: false });
   doc.pipe(out);
   doc.registerFont('R', opt.font);
   doc.registerFont('B', opt.boldFont || opt.font);
+  const fonts = fontPicker(doc, opt.fallbackFonts);
 
   const L = layout(doc, opt);
+  L.fonts = fonts;
   const lines = screen.lines.length ? screen.lines : [[]];
   const total = Math.ceil(lines.length / L.perPage);
   for (let n = 0; n < total; n++) {
@@ -154,11 +186,12 @@ function render(screen, out, opt = {}) {
   return {
     fontSize: L.fs, linesPerPage: L.perPage, pages: total,
     sheets: Math.ceil(total / L.slots.length),
+    missing: fonts.missing,
   };
 }
 
 function drawPage(doc, page, origin, L) {
-  const m = { fs: L.fs, ch: L.ch, lw: L.lw, base: L.base };
+  const m = { fs: L.fs, ch: L.ch, lw: L.lw, base: L.base, fonts: L.fonts };
   // Backgrounds first, so that glyphs and lines are drawn over them.
   // Runs of a color are filled as one path per color: filling cells one by
   // one leaves faint seams between them in reduced views.
@@ -220,7 +253,7 @@ function drawCell(doc, cell, x, y, w, m) {
 }
 
 function drawGlyph(doc, cell, text, x, y, w, m, fg) {
-  doc.font(cell.bold ? 'B' : 'R').fontSize(m.fs).fillColor(fg);
+  doc.font(m.fonts.pick(text, cell.bold)).fontSize(m.fs).fillColor(fg);
   const adv = doc.widthOfString(text);
   const sx = adv > w * 1.01 ? w / adv : 1;      // squeeze glyphs wider than the cell
   const skew = cell.italic ? 0.2 : 0;

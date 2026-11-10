@@ -43,3 +43,13 @@ test('panes and rows', { skip: !FONT && 'font not found' }, async () => {
     await assert.rejects(pdf(text, { pane: bad }), /bad pane/);
   }
 });
+
+const FALLBACK = ['/System/Library/Fonts/Menlo.ttc'].find((f) => fs.existsSync(f));
+
+test('fallback font and missing glyphs', { skip: !(FONT && FALLBACK) && 'font not found' }, async () => {
+  const input = 'a‣b ก\n';
+  const none = await pdf(input, {});
+  assert.deepStrictEqual([...none.info.missing], [['‣', 1], ['ก', 1]]);
+  const fb = await pdf(input, { fallbackFonts: [{ src: FALLBACK, family: 'Menlo-Regular' }] });
+  assert.deepStrictEqual([...fb.info.missing], [['ก', 1]]);
+});

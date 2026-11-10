@@ -112,6 +112,11 @@ Default is BIZ UDGothic.
 Font file for bold text.
 Default is BIZ UDGothic Bold, when \f[B]\-\-font\f[R] is not given.
 .TP
+\f[B]\-\-fallback\-font\f[R] \f[I]FILE\f[R]
+Font file for characters that the main font does not have.
+It can be repeated, and the fonts are tried in order before the default
+ones described in FONTS.
+.TP
 \f[B]\-h\f[R], \f[B]\-\-help\f[R]
 Show a summary of the options.
 .SH FONTS
@@ -132,6 +137,17 @@ are looked for in these directories:
 Other fonts can be given by \f[B]\-\-font\f[R] and
 \f[B]\-\-bold\-font\f[R].
 Only the glyphs used are embedded in the PDF.
+.PP
+Characters that the main font does not have are drawn with a fallback
+font: those given by \f[B]\-\-fallback\-font\f[R], then Noto Sans Mono
+(\f[B]NotoSansMono\-Regular.ttf\f[R] or its variable font, in the
+directories above), Menlo (\f[B]/System/Library/Fonts/Menlo.ttc\f[R])
+and DejaVu Sans Mono
+(\f[B]/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf\f[R]),
+whichever are found.
+A glyph wider than a cell is narrowed to fit.
+Characters that no font has are reported on the standard error, and are
+left blank.
 .SH EXAMPLES
 Print a colored diff:
 .IP

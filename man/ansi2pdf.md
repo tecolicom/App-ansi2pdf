@@ -106,6 +106,11 @@ file given by **--output**; it is not written to a terminal.
 :   Font file for bold text.  Default is BIZ UDGothic Bold, when
     **--font** is not given.
 
+**--fallback-font** *FILE*
+:   Font file for characters that the main font does not have.  It can
+    be repeated, and the fonts are tried in order before the default
+    ones described in FONTS.
+
 **-h**, **--help**
 :   Show a summary of the options.
 
@@ -124,6 +129,14 @@ are looked for in these directories:
 
 Other fonts can be given by **--font** and **--bold-font**.  Only the
 glyphs used are embedded in the PDF.
+
+Characters that the main font does not have are drawn with a fallback
+font: those given by **--fallback-font**, then Noto Sans Mono
+(**NotoSansMono-Regular.ttf** or its variable font, in the directories
+above), Menlo (**/System/Library/Fonts/Menlo.ttc**) and DejaVu Sans Mono
+(**/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf**), whichever are
+found.  A glyph wider than a cell is narrowed to fit.  Characters that
+no font has are reported on the standard error, and are left blank.
 
 # EXAMPLES
 

@@ -30,6 +30,9 @@ printer.
   (`BIZUDGothic-Regular.ttf` and `BIZUDGothic-Bold.ttf`), looked for in
   `~/Library/Fonts`, `/Library/Fonts`, `/usr/share/fonts/truetype` and
   `/usr/local/share/fonts`.  Other fonts can be given by `--font`.
+- Characters the main font does not have are drawn with a fallback
+  font: Noto Sans Mono, Menlo or DejaVu Sans Mono if found, or one
+  given by `--fallback-font`.  Characters no font has are reported.
 
 ## Installation
 
