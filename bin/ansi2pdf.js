@@ -51,6 +51,17 @@ const FALLBACK_FONTS = [
   { src: '/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf' },
 ];
 
+// Monospaced fonts used in place of BIZ UDGothic when it is not found, so
+// that the command works without it.  They do not have Japanese.
+const DEJAVU = '/usr/share/fonts/truetype/dejavu/DejaVuSansMono';
+const SUBSTITUTE_FONTS = [
+  { src: '/System/Library/Fonts/Menlo.ttc', family: 'Menlo-Regular',
+    bold: { src: '/System/Library/Fonts/Menlo.ttc', family: 'Menlo-Bold' } },
+  { src: `${DEJAVU}.ttf`, bold: { src: `${DEJAVU}-Bold.ttf` } },
+];
+const FONT_HINT = 'install BIZ UDGothic (https://fonts.google.com/specimen/BIZ+UDGothic, '
+  + 'or "brew install --cask font-biz-udgothic"), or specify --font';
+
 function fallbackFonts(given = []) {
   const found = [];
   for (const f of FALLBACK_FONTS) {
@@ -104,9 +115,15 @@ async function main() {
   const landscape = last && (last.name === 'landscape') !== last.rawName.startsWith('--no-');
   if (!PAPER[o.paper.toLowerCase()]) throw new Error(`unknown paper: ${o.paper}`);
 
-  const font = o.font ?? findFont('BIZUDGothic-Regular.ttf');
-  if (!font) throw new Error('font not found; specify --font');
-  const boldFont = o['bold-font'] ?? (o.font ? null : findFont('BIZUDGothic-Bold.ttf'));
+  let font = o.font ?? findFont('BIZUDGothic-Regular.ttf');
+  let boldFont = o['bold-font'] ?? (o.font ? null : findFont('BIZUDGothic-Bold.ttf'));
+  let substitute = null;
+  if (!font) {
+    substitute = SUBSTITUTE_FONTS.find((f) => fs.existsSync(f.src));
+    if (!substitute) throw new Error(`font not found; ${FONT_HINT}`);
+    font = substitute;
+    boldFont = o['bold-font'] ?? (fs.existsSync(substitute.bold.src) ? substitute.bold : null);
+  }
 
   const num =(v) => (v === undefined ? undefined : Number(v));
   const opt = {
@@ -133,11 +150,18 @@ async function main() {
     const code = [...ch].map((c) => 'U+' + c.codePointAt(0).toString(16).toUpperCase().padStart(4, '0'));
     process.stderr.write(`ansi2pdf: no font has "${ch}" (${code.join(' ')}), ${n} time(s)\n`);
   }
+  if (substitute && info.missing.size) {
+    process.stderr.write(`ansi2pdf: ${path.basename(substitute.src)} is used in place of `
+      + `BIZ UDGothic, which is not found; ${FONT_HINT}\n`);
+  }
   if (o.output) {
     await new Promise((r) => out.on('finish', r));
     process.stderr.write(`${o.output}: ${screen.cols} cols, ${info.linesPerPage} lines/page, `
       + `${info.pages} page(s) on ${info.sheets} sheet(s), ${info.fontSize.toFixed(2)}pt\n`);
   }
 }
+
+// end quietly when the reader of the output goes away, as in "ansi2pdf | head"
+process.stdout.on('error', (e) => { if (e.code === 'EPIPE') process.exit(0); throw e; });
 
 main().catch((e) => { process.stderr.write(`ansi2pdf: ${e.message}\n`); process.exit(1); });

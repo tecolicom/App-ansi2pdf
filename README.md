@@ -22,6 +22,12 @@ landscape A4 sheet.  The font size is decided by the number of lines,
 and long lines wrap as on a terminal, as when text is printed on a
 printer.  A form feed starts a new page.
 
+## Status
+
+The version is before 1.0.  Options, defaults and the output may change
+in ways that are not compatible with earlier versions, until version
+1.0 is released.
+
 ## Requirements
 
 - Node.js 20.16 or later
@@ -30,6 +36,9 @@ printer.  A form feed starts a new page.
   (`BIZUDGothic-Regular.ttf` and `BIZUDGothic-Bold.ttf`), looked for in
   `~/Library/Fonts`, `/Library/Fonts`, `/usr/share/fonts/truetype` and
   `/usr/local/share/fonts`.  Other fonts can be given by `--font`.
+  With Homebrew, it is installed by
+  `brew install --cask font-biz-udgothic`.  When it is not found, Menlo
+  or DejaVu Sans Mono is used in its place, without Japanese.
 - Characters the main font does not have are drawn with a fallback
   font: Noto Sans Mono, Menlo or DejaVu Sans Mono if found, or one
   given by `--fallback-font`.  Characters no font has are reported.

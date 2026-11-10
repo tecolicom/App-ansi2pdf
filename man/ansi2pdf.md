@@ -139,6 +139,11 @@ are looked for in these directories:
     /usr/share/fonts/truetype
     /usr/local/share/fonts
 
+With Homebrew, **brew install --cask font-biz-udgothic** installs them.
+When they are not found and **--font** is not given, Menlo or DejaVu
+Sans Mono is used in their place, so that the command works without
+them.  These fonts do not have Japanese.
+
 Other fonts can be given by **--font** and **--bold-font**.  Only the
 glyphs used are embedded in the PDF.
 
@@ -183,6 +188,12 @@ is ignored.  Images (SIXEL, iTerm2 inline images) are not supported.
 The default foreground and background are black on white paper.
 Colors of the 16-color palette are those of xterm.js, so white text
 may be hard to read on paper.
+
+# COMPATIBILITY
+
+The version is before 1.0.  Options, defaults and the output may change
+in ways that are not compatible with earlier versions, until version
+1.0 is released.
 
 # SEE ALSO
 

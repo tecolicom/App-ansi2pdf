@@ -123,10 +123,17 @@ function layout(doc, opt) {
   };
 }
 
+// Register a font given as a file name, or as { src, family } for a font
+// in a collection.
+function register(doc, name, font) {
+  if (typeof font === 'string') doc.registerFont(name, font);
+  else doc.registerFont(name, font.src, font.family);
+}
+
 // columns and lines of a logical page, to run the terminal emulator with
 function geometry(opt) {
   const doc = new PDFDocument({ autoFirstPage: false });
-  doc.registerFont('R', opt.font);
+  register(doc, 'R', opt.font);
   const L = layout(doc, opt);
   return { cols: L.cols, lines: L.perPage };
 }
@@ -177,8 +184,8 @@ function paginate(screen, perPage) {
 function render(screen, out, opt = {}) {
   const doc = new PDFDocument({ margin: 0, autoFirstPage: false });
   doc.pipe(out);
-  doc.registerFont('R', opt.font);
-  doc.registerFont('B', opt.boldFont || opt.font);
+  register(doc, 'R', opt.font);
+  register(doc, 'B', opt.boldFont || opt.font);
   const fonts = fontPicker(doc, opt.fallbackFonts);
 
   const L = layout(doc, opt);
