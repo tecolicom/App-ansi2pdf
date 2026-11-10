@@ -34,6 +34,11 @@ test('pages and sheets', { skip: !FONT && 'font not found' }, async () => {
   assert.deepStrictEqual([grid.info.pages, grid.sheets], [10, 2]);
 });
 
+test('form feeds start new pages', { skip: !FONT && 'font not found' }, async () => {
+  const r = await pdf('a\nb\n\fc\n\f\fd\n', { lines: 30 });
+  assert.deepStrictEqual([r.info.pages, r.sheets], [4, 4]);
+});
+
 test('panes and rows', { skip: !FONT && 'font not found' }, async () => {
   const four = await pdf(text, { lines: 10, pane: 4 });
   assert.deepStrictEqual([four.info.pages, four.sheets], [10, 3]);

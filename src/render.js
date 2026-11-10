@@ -160,6 +160,19 @@ function fontPicker(doc, fallbacks = []) {
   };
 }
 
+// Split lines into pages of perPage lines, also at page breaks (form feeds).
+function paginate(screen, perPage) {
+  const lines = screen.lines.length ? screen.lines : [[]];
+  const starts = [0, ...(screen.breaks ?? []), lines.length];
+  const pages = [];
+  for (let i = 0; i < starts.length - 1; i++) {
+    const part = lines.slice(starts[i], starts[i + 1]);
+    for (let p = 0; p < part.length; p += perPage) pages.push(part.slice(p, p + perPage));
+    if (!part.length) pages.push([]);      // consecutive form feeds make a blank page
+  }
+  return pages;
+}
+
 function render(screen, out, opt = {}) {
   const doc = new PDFDocument({ margin: 0, autoFirstPage: false });
   doc.pipe(out);
@@ -169,12 +182,12 @@ function render(screen, out, opt = {}) {
 
   const L = layout(doc, opt);
   L.fonts = fonts;
-  const lines = screen.lines.length ? screen.lines : [[]];
-  const total = Math.ceil(lines.length / L.perPage);
+  const pages = paginate(screen, L.perPage);
+  const total = pages.length;
   for (let n = 0; n < total; n++) {
     const slot = L.slots[n % L.slots.length];
     if (n % L.slots.length === 0) doc.addPage({ size: L.size, margin: 0 });
-    drawPage(doc, lines.slice(n * L.perPage, (n + 1) * L.perPage), slot.text, L);
+    drawPage(doc, pages[n], slot.text, L);
     if (opt.border) {
       const b = slot.border;
       doc.save().lineWidth(Math.max(0.5, L.lw)).strokeColor(INK_COLOR)

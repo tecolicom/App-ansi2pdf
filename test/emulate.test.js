@@ -36,3 +36,13 @@ test('erase line fills the rest of the line with background', async () => {
   const s = await emulate('xxxxxxxx\n\x1b[44mab\x1b[K\x1b[m\n', { cols: 8 });
   assert.deepStrictEqual(at(s, 1, 7).bg, { mode: 'p16', value: 4 });
 });
+
+test('form feeds are page breaks', async () => {
+  const rows = (s) => s.lines.map((l) => l.map((c) => c.ch || ' ').join('').trimEnd());
+  const a = await emulate('a\nb\n\fc\nd\n', { cols: 10 });
+  assert.deepStrictEqual([rows(a), a.breaks], [['a', 'b', 'c', 'd'], [2]]);
+  const b = await emulate('a\nb\fc\n', { cols: 10 });
+  assert.deepStrictEqual([rows(b), b.breaks], [['a', 'b', 'c'], [2]]);
+  const c = await emulate('\fa\n\f\fb\n\f', { cols: 10 });
+  assert.deepStrictEqual([rows(c), c.breaks], [['a', 'b'], [1, 1]]);
+});

@@ -20,7 +20,7 @@ a terminal.  The result is drawn with [PDFKit](https://pdfkit.org/).
 By default, two pages of 60 lines are printed side by side on a
 landscape A4 sheet.  The font size is decided by the number of lines,
 and long lines wrap as on a terminal, as when text is printed on a
-printer.
+printer.  A form feed starts a new page.
 
 ## Requirements
 

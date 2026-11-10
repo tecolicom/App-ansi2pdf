@@ -41,11 +41,24 @@ function write(term, data) {
   return new Promise((resolve) => term.write(data, resolve));
 }
 
+// Form feeds are page breaks.  xterm.js takes FF as a line feed and
+// leaves no trace of it, so a private OSC is put before each FF to record
+// the row where it is.  A new page starts at the next row.  When FF is at
+// the beginning of a line, the line it leaves empty is dropped.
+const FF_OSC = 7770;
+
 async function run(input, cols) {
   const term = new Terminal({
     cols, rows: 24, scrollback: 1e7, convertEol: true, allowProposedApi: true,
   });
-  await write(term, input);
+  const breaks = [];
+  term.parser.registerOscHandler(FF_OSC, () => {
+    const buf = term.buffer.active;
+    breaks.push({ row: buf.baseY + buf.cursorY, drop: buf.cursorX === 0 });
+    return true;
+  });
+  await write(term, input.replace(/\f/g, `\x1b]${FF_OSC};\x07\f`));
+  term.breaks = breaks;
   return term;
 }
 
@@ -86,7 +99,13 @@ async function emulate(input, options = {}) {
     cols = Math.max(1, usedWidth(await run(input, MAX_COLS)));
   }
   const term = await run(input, cols);
-  return { cols, lines: grid(term) };
+  let lines = grid(term);
+  // drop the rows left empty by form feeds, and find where pages start
+  const drop = new Set(term.breaks.filter((b) => b.drop).map((b) => b.row));
+  const dropped = (row) => [...drop].filter((r) => r < row).length;
+  const breaks = term.breaks.map((b) => b.row + 1 - dropped(b.row + 1));
+  lines = lines.filter((_, row) => !drop.has(row));
+  return { cols, lines, breaks: breaks.filter((r) => r > 0 && r < lines.length) };
 }
 
 module.exports = { emulate };

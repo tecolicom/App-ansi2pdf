@@ -38,6 +38,9 @@ that fit the width of a logical page, and longer lines wrap as they do
 on a terminal.  The length of the lines does not change the font size,
 unless **--width** is given.
 
+A form feed (**^L**) starts a new page.  Consecutive form feeds make a
+blank page.
+
 Files are read in order and concatenated.  Without files, the standard
 input is read.  The PDF is written to the standard output, or to the
 file given by **--output**; it is not written to a terminal.
@@ -162,9 +165,6 @@ Print a man page with a header, without borders:
     man -P cat ls | ansi2pdf -H -t ls --no-border -o ls.pdf
 
 # LIMITATIONS
-
-Pages are separated by counting lines; form feeds and other page breaks
-in the input are not recognized.
 
 Output that redraws the whole screen is interpreted on a terminal of 24
 lines, and may differ from what was seen on the real terminal.
