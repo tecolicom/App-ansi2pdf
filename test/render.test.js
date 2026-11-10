@@ -34,6 +34,27 @@ test('pages and sheets', { skip: !FONT && 'font not found' }, async () => {
   assert.deepStrictEqual([grid.info.pages, grid.sheets], [10, 2]);
 });
 
+test('lines, width and font size', { skip: !FONT && 'font not found' }, () => {
+  const { geometry } = require('../src/render');
+  const g = (opt) => geometry({ font: FONT, pane: '2', border: true, ...opt });
+  const base = g({});
+  assert.strictEqual(base.lines, 60);
+  // more lines make the font smaller, and more columns fit
+  const tall = g({ lines: 80 });
+  assert.ok(tall.lines === 80 && tall.cols > base.cols);
+  // the lines follow the width
+  const wide = g({ width: base.cols * 2 });
+  assert.ok(wide.cols === base.cols * 2 && wide.lines > 60);
+  const narrow = g({ width: Math.floor(base.cols / 2) });
+  assert.ok(narrow.lines < 60);
+  // both are kept
+  assert.deepStrictEqual(g({ width: 300, lines: 20 }), { cols: 300, lines: 20 });
+  // the lines and the columns follow the font size
+  const big = g({ fontSize: 12 }), small = g({ fontSize: 6 });
+  assert.ok(big.lines < small.lines && big.cols < small.cols);
+  assert.strictEqual(g({ fontSize: 12, lines: 10 }).lines, 10);
+});
+
 test('form feeds start new pages', { skip: !FONT && 'font not found' }, async () => {
   const r = await pdf('a\nb\n\fc\n\f\fd\n', { lines: 30 });
   assert.deepStrictEqual([r.info.pages, r.sheets], [4, 4]);

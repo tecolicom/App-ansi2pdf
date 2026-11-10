@@ -2,7 +2,7 @@
 title: ANSI2PDF
 section: 1
 header: User Commands
-footer: ansi2pdf 0.1.1
+footer: ansi2pdf 0.1.2
 ---
 
 # NAME
@@ -35,8 +35,20 @@ landscape A4 sheet, each with a border.
 The font size is decided by the number of lines on a page, as when text
 is printed on a printer.  The terminal is run with the number of columns
 that fit the width of a logical page, and longer lines wrap as they do
-on a terminal.  The length of the lines does not change the font size,
-unless **--width** is given.
+on a terminal.  The length of the lines in the input does not change
+the font size.
+
+The number of lines (**--lines**), the number of columns (**--width**)
+and the font size (**--font-size**) depend on each other, as the shape
+of a character is fixed.  The ones that are given are kept, and the
+others follow them to fill the page:
+
+    --lines             the font size for the lines, and the columns that fit
+    --width             the font size for the columns, and the lines that fit
+    --lines and --width the font size for both to fit
+    --font-size         the lines and the columns that fit
+
+When none of them is given, a page has 60 lines.
 
 A form feed (**^L**) starts a new page.  Consecutive form feeds make a
 blank page.  Clearing the screen (**ESC [ 2 J**, as by **clear**(1))
@@ -73,12 +85,14 @@ file given by **--output**; it is not written to a terminal.
 
 **-l**, **--lines** *N*
 :   Number of lines on a logical page.  The font size is chosen to fit
-    them.  Default is **60**.
+    them.  Default is **60**, or as many lines as fit the page when
+    **--width** or **--font-size** is given.
 
 **-w**, **--width** *N*
-:   Run the terminal with *N* columns.  Lines longer than that wrap, and
-    the font is made smaller if *N* columns do not fit the page.
-    Default is as many columns as fit the page.
+:   Run the terminal with *N* columns.  Lines longer than that wrap.
+    The font size is chosen for *N* columns to fill the width of the
+    page, unless **--lines** makes it smaller.  Default is as many
+    columns as fit the page.
 
 **-B**, **--border**, **--no-border**
 :   Draw a border around each logical page.  The border has the size of
@@ -100,7 +114,8 @@ file given by **--output**; it is not written to a terminal.
 :   Margin of the sheet in millimeters.  Default is **10**.
 
 **-s**, **--font-size** *PT*
-:   Font size in points, instead of fitting **--lines** to the page.
+:   Font size in points.  The page has as many lines and columns as fit
+    it, unless they are given.
 
 **--line-height** *R*
 :   Line height relative to the font size.  Default is **1.2**.

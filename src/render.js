@@ -69,9 +69,18 @@ function sheetLayout(opt) {
 }
 
 // Compute the font size, the cell size and the position of each logical page.
-// The font size comes from the lines per page, as in printing text on a
-// printer, and the width of a logical page gives the number of columns.
-// When opt.width is given, the font is made smaller to fit that many columns.
+//
+// The font size (fontSize), the lines per page (lines) and the columns of a
+// line (width) depend on each other, as the shape of a character is fixed.
+// The ones that are given are kept, and the others follow them to fill the
+// logical page:
+//   lines            the font size to fit the lines, and the columns that fit
+//   width            the font size to fit the columns, and the lines that fit
+//   lines and width  the font size to fit both
+//   fontSize         the lines and the columns that fit
+// With none of them, the lines are DEFAULT_LINES.
+const DEFAULT_LINES = 60;
+
 function layout(doc, opt) {
   const { gc, gr, size: [pw, ph] } = sheetLayout(opt);
   const margin = (opt.margin ?? 10) * MM;
@@ -91,14 +100,14 @@ function layout(doc, opt) {
   const half = doc.widthOfString('M') / 1000;
   const { ascender, descender } = doc._font;
 
-  let fs = opt.fontSize;
-  if (!fs) {
-    fs = opt.lines ? textH / (opt.lines * lineHeight) : opt.maxFontSize ?? 12;
-    if (opt.width) fs = Math.min(fs, textW / (opt.width * half));
-  }
+  const lines = opt.lines || (opt.width || opt.fontSize ? undefined : DEFAULT_LINES);
+  const fs = opt.fontSize || Math.min(
+    lines ? textH / (lines * lineHeight) : Infinity,
+    opt.width ? textW / (opt.width * half) : Infinity,
+  );
   const cw = fs * half, ch = fs * lineHeight;
   const cols = opt.width || Math.max(1, Math.floor(textW / cw + 1e-6));
-  const perPage = opt.lines || Math.max(1, Math.floor(textH / ch));
+  const perPage = lines || Math.max(1, Math.floor(textH / ch + 1e-6));
   const boxH = (ascender - descender) * fs / 1000;
 
   const slots = [];

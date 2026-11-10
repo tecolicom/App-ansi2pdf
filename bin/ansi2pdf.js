@@ -11,9 +11,10 @@ const { render, geometry, PAPER } = require('../src/render');
 const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
 
   -o, --output FILE      output file (default: stdout)
+  -l, --lines N          lines per page (default: 60, or as many as fit the
+                         page when -w or -s is given)
   -w, --width N          columns of a line; longer lines are wrapped as on a
                          terminal (default: as many as fit the page)
-  -l, --lines N          lines per page (default: 60)
   -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4)
   -L, --landscape        landscape orientation
   -P, --portrait         portrait orientation
@@ -24,7 +25,8 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
   -H, --header           print a header with the title and page number
   -t, --title TEXT       title in the header (default: file name)
       --gap MM           space between logical pages in mm (default: 6)
-  -s, --font-size PT     font size (default: fit to the paper)
+  -s, --font-size PT     font size (default: the size for the lines and the
+                         columns to fill the page)
   -m, --margin MM        margin in mm (default: 10)
       --line-height R    line height relative to the font size (default: 1.2)
       --font FILE        font file (default: BIZ UDGothic)
@@ -89,7 +91,7 @@ async function main() {
     options: {
       output: { type: 'string', short: 'o' },
       width: { type: 'string', short: 'w' },
-      lines: { type: 'string', short: 'l', default: '60' },
+      lines: { type: 'string', short: 'l' },
       paper: { type: 'string', short: 'p', default: 'a4' },
       landscape: { type: 'boolean', short: 'L' },
       portrait: { type: 'boolean', short: 'P' },
