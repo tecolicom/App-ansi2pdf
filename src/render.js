@@ -242,11 +242,11 @@ function drawPage(doc, page, origin, L) {
     const y = origin.y + row * L.ch;
     cells.forEach((cell, col) => {
       if (cell.width === 0) return;
-      // A glyph wider than its cell may extend over a blank cell next to it,
-      // as terminals do, such as an ambiguous-width character followed by a
-      // space to keep its room.
+      // A glyph wider than its cell may extend over a no-break space next to
+      // it, which keeps the room for an ambiguous-width character (as the
+      // widen theme of mdee does).
       const next = cells[col + cell.width];
-      const room = next && next.width === 1 && (!next.ch || next.ch === ' ' || next.ch === '\u00a0') ? L.cw : 0;
+      const room = next && next.width === 1 && next.ch === '\u00a0' ? L.cw : 0;
       drawCell(doc, cell, origin.x + col * L.cw, y, L.cw * cell.width, m, room);
     });
   });
