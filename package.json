@@ -4,6 +4,14 @@
   "description": "Render terminal output with ANSI sequences to PDF",
   "license": "MIT",
   "author": "Kazumasa Utashiro",
+  "homepage": "https://github.com/tecolicom/App-ansi2pdf#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tecolicom/App-ansi2pdf.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tecolicom/App-ansi2pdf/issues"
+  },
   "private": true,
   "bin": {
     "ansi2pdf": "bin/ansi2pdf.js"

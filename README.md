@@ -36,17 +36,24 @@ printer.  A form feed starts a new page.
 
 ## Installation
 
-From a clone of this repository:
+From GitHub:
+
+```sh
+npm install -g github:tecolicom/App-ansi2pdf
+```
+
+The manual is installed as `ansi2pdf(1)`; if `man ansi2pdf` does not
+find it, add `$(npm prefix -g)/share/man` to `MANPATH`.
+
+For development, from a clone of this repository:
 
 ```sh
 npm install
 npm install -g .
 ```
 
-`npm install -g .` links the global command to this directory, so
-changes to the source take effect without reinstalling.  The manual is
-installed as `ansi2pdf(1)`; if `man ansi2pdf` does not find it, add
-`$(npm prefix -g)/share/man` to `MANPATH`.
+`npm install -g .` links the global command to the clone, so changes
+to the source take effect without reinstalling.
 
 To uninstall:
 
