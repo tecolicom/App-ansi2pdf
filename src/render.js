@@ -159,15 +159,30 @@ function render(screen, out, opt = {}) {
 
 function drawPage(doc, page, origin, L) {
   const m = { fs: L.fs, ch: L.ch, lw: L.lw, base: L.base };
-  // backgrounds first, so that glyphs and lines are drawn over them
+  // Backgrounds first, so that glyphs and lines are drawn over them.
+  // Runs of a color are filled as one path per color: filling cells one by
+  // one leaves faint seams between them in reduced views.
+  const runs = new Map();
   page.forEach((cells, row) => {
-    const y = origin.y + row * L.ch;
+    let run = null;
     cells.forEach((cell, col) => {
       if (cell.width === 0) return;
       const { bg } = colors(cell);
-      if (bg) doc.rect(origin.x + col * L.cw, y, L.cw * cell.width + 0.1, L.ch + 0.1).fill(bg);
+      if (run && run.bg === bg && run.end === col) {
+        run.end = col + cell.width;
+      } else {
+        run = { bg, row, start: col, end: col + cell.width };
+        if (bg) (runs.get(bg) ?? runs.set(bg, []).get(bg)).push(run);
+      }
     });
   });
+  for (const [bg, list] of runs) {
+    for (const r of list) {
+      doc.rect(origin.x + r.start * L.cw, origin.y + r.row * L.ch,
+               (r.end - r.start) * L.cw + 0.1, L.ch + 0.1);
+    }
+    doc.fill(bg);
+  }
   page.forEach((cells, row) => {
     const y = origin.y + row * L.ch;
     cells.forEach((cell, col) => {
