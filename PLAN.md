@@ -62,6 +62,7 @@
   2. ansicolumn に `-w` と `--height` を明示して渡す。
   3. ページャを `ansi2pdf -C1 --no-border -w 桁数 -l 行数 -o FILE` にする。
 - 紙の大きさ・向き・行数は、nup の `--pdf-opts` で ansi2pdf のオプションをそのまま渡す。
+- 状況（2026-11-10）：ansi2pdf の `--geometry` は済。nup の `--pdf`・`--pdf-opts` は App-nup の作業ツリーに実装済みで、未コミット。nup の既定は横向き（`-L`）で、`--pdf-opts=-P` で縦にできる（後の指定が勝つ）。`-P`（ページの高さ）は PDF では使わない。
 - 段の区切りを OSC で伝えて論理的な順に描くことや、mdee からの利用は、そのあとで考える。
 
 ## 確認済みのこと
