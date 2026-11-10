@@ -242,7 +242,12 @@ function drawPage(doc, page, origin, L) {
     const y = origin.y + row * L.ch;
     cells.forEach((cell, col) => {
       if (cell.width === 0) return;
-      drawCell(doc, cell, origin.x + col * L.cw, y, L.cw * cell.width, m);
+      // A glyph wider than its cell may extend over a blank cell next to it,
+      // as terminals do, such as an ambiguous-width character followed by a
+      // space to keep its room.
+      const next = cells[col + cell.width];
+      const room = next && next.width === 1 && (!next.ch || next.ch === ' ' || next.ch === '\u00a0') ? L.cw : 0;
+      drawCell(doc, cell, origin.x + col * L.cw, y, L.cw * cell.width, m, room);
     });
   });
 }
@@ -255,12 +260,12 @@ function drawHeader(doc, h, left, right) {
   doc.restore();
 }
 
-function drawCell(doc, cell, x, y, w, m) {
+function drawCell(doc, cell, x, y, w, m, room = 0) {
   const { fg } = colors(cell);
   const text = cell.ch;
   if (text && text !== ' ' && !cell.invisible && !blockOf(text)) {
     if (!(isBox(text) && drawBox(doc, text, x, y, w, m.ch, m.lw, fg))) {
-      drawGlyph(doc, cell, text, x, y, w, m, fg);
+      drawGlyph(doc, cell, text, x, y, w, m, fg, room);
     }
   }
   const line = (yy, color, width) => {
@@ -274,10 +279,11 @@ function drawCell(doc, cell, x, y, w, m) {
   if (cell.overline) line(y + m.lw, fg, m.lw);
 }
 
-function drawGlyph(doc, cell, text, x, y, w, m, fg) {
+function drawGlyph(doc, cell, text, x, y, w, m, fg, room = 0) {
   doc.font(m.fonts.pick(text, cell.bold)).fontSize(m.fs).fillColor(fg);
   const adv = doc.widthOfString(text);
-  const sx = adv > w * 1.01 ? w / adv : 1;      // squeeze glyphs wider than the cell
+  // squeeze glyphs wider than the cell and the room next to it
+  const sx = adv > (w + room) * 1.01 ? (w + room) / adv : 1;
   const skew = cell.italic ? 0.2 : 0;
   doc.save();
   doc.transform(sx, 0, -skew, 1, x, y + m.base);   // origin at the baseline
