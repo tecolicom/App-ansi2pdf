@@ -2,7 +2,7 @@
 title: ANSI2PDF
 section: 1
 header: User Commands
-footer: ansi2pdf 0.1.0
+footer: ansi2pdf 0.1.1
 ---
 
 # NAME
@@ -53,9 +53,9 @@ file given by **--output**; it is not written to a terminal.
 :   Write the PDF to *FILE*, and print a summary of the layout to the
     standard error.
 
-**-C**, **--pane** *C*[**.***R*]
+**-C**, **--pane** *C*[**,***R*]
 :   Arrange logical pages on a sheet in *C* columns and *R* rows.
-    **-C 2** prints two pages side by side, and **-C 2.2** prints four
+    **-C 2** prints two pages side by side, and **-C 2,2** prints four
     pages in two columns and two rows.  The number of columns cannot be
     omitted.  Default is **2**.
 

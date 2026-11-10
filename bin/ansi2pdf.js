@@ -18,8 +18,8 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
   -L, --landscape        landscape orientation
   -P, --portrait         portrait orientation
                          (default: landscape when -C has more columns than rows)
-  -C, --pane C[.R]       logical pages on a sheet in C columns and R rows,
-                         as 2 or 2.2 (default: 2)
+  -C, --pane C[,R]       logical pages on a sheet in C columns and R rows,
+                         as 2 or 2,2 (default: 2)
   -B, --[no-]border      draw a border around each logical page (default: on)
   -H, --header           print a header with the title and page number
   -t, --title TEXT       title in the header (default: file name)

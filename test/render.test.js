@@ -30,7 +30,7 @@ test('pages and sheets', { skip: !FONT && 'font not found' }, async () => {
   assert.deepStrictEqual([one.info.pages, one.sheets], [4, 4]);
   const two = await pdf(text, { lines: 30, pane: 2, border: true, header: true, title: 't' });
   assert.deepStrictEqual([two.info.pages, two.sheets], [4, 2]);
-  const grid = await pdf(text, { lines: 10, pane: '3.2' });
+  const grid = await pdf(text, { lines: 10, pane: '3,2' });
   assert.deepStrictEqual([grid.info.pages, grid.sheets], [10, 2]);
 });
 
@@ -42,9 +42,9 @@ test('form feeds start new pages', { skip: !FONT && 'font not found' }, async ()
 test('panes and rows', { skip: !FONT && 'font not found' }, async () => {
   const four = await pdf(text, { lines: 10, pane: 4 });
   assert.deepStrictEqual([four.info.pages, four.sheets], [10, 3]);
-  const grid = await pdf(text, { lines: 10, pane: '2.2' });
+  const grid = await pdf(text, { lines: 10, pane: '2,2' });
   assert.deepStrictEqual([grid.info.pages, grid.sheets], [10, 3]);
-  for (const bad of ['.2', '2.', '2x2', '0', '2.0']) {
+  for (const bad of [',2', '2,', '2.2', '2x2', '0', '2,0']) {
     await assert.rejects(pdf(text, { pane: bad }), /bad pane/);
   }
 });

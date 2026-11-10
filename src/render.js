@@ -51,9 +51,9 @@ function colors(cell) {
   return { fg, bg };
 }
 
-// Logical pages on a sheet, given as "C" or "C.R": C columns and R rows.
+// Logical pages on a sheet, given as "C" or "C,R": C columns and R rows.
 function parsePane(v) {
-  const m = /^(\d+)(?:\.(\d+))?$/.exec(String(v));
+  const m = /^(\d+)(?:,(\d+))?$/.exec(String(v));
   const [c, r] = m ? [Number(m[1]), Number(m[2] ?? 1)] : [0, 0];
   if (!(c >= 1 && r >= 1)) throw new Error(`bad pane: ${v}`);
   return [c, r];
