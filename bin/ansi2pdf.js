@@ -15,8 +15,9 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
                          terminal (default: as many as fit the page)
   -l, --lines N          lines per page (default: 60)
   -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4)
-  -L, --[no-]landscape   landscape or portrait (default: landscape when there
-                         are more columns than rows in -C)
+  -L, --landscape        landscape orientation
+  -P, --portrait         portrait orientation
+                         (default: landscape when -C has more columns than rows)
   -C, --pane C[.R]       logical pages on a sheet in C columns and R rows,
                          as 2 or 2.2 (default: 2)
   -B, --[no-]border      draw a border around each logical page (default: on)
@@ -54,6 +55,7 @@ async function main() {
       lines: { type: 'string', short: 'l', default: '60' },
       paper: { type: 'string', short: 'p', default: 'a4' },
       landscape: { type: 'boolean', short: 'L' },
+      portrait: { type: 'boolean', short: 'P' },
       pane: { type: 'string', short: 'C', default: '2' },
       border: { type: 'boolean', short: 'B', default: true },
       header: { type: 'boolean', short: 'H' },
@@ -68,6 +70,7 @@ async function main() {
     },
   });
   if (o.help) { process.stdout.write(USAGE); return; }
+  if (o.landscape && o.portrait) throw new Error('-L and -P cannot be used together');
   if (!PAPER[o.paper.toLowerCase()]) throw new Error(`unknown paper: ${o.paper}`);
 
   const font = o.font ?? findFont('BIZUDGothic-Regular.ttf');
@@ -80,7 +83,7 @@ async function main() {
 
   const num = (v) => (v === undefined ? undefined : Number(v));
   const opt = {
-    paper: o.paper, landscape: o.landscape, lines: num(o.lines), width: num(o.width),
+    paper: o.paper, landscape: o.portrait ? false : o.landscape, lines: num(o.lines), width: num(o.width),
     pane: o.pane, border: o.border, header: o.header, gap: num(o.gap),
     title: o.title ?? (files.length === 1 ? path.basename(files[0]) : ''),
     fontSize: num(o['font-size']), margin: num(o.margin), lineHeight: num(o['line-height']),
