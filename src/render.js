@@ -123,11 +123,12 @@ function layout(doc, opt) {
   };
 }
 
-// number of columns of a logical page, to run the terminal emulator with
-function columns(opt) {
+// columns and lines of a logical page, to run the terminal emulator with
+function geometry(opt) {
   const doc = new PDFDocument({ autoFirstPage: false });
   doc.registerFont('R', opt.font);
-  return layout(doc, opt).cols;
+  const L = layout(doc, opt);
+  return { cols: L.cols, lines: L.perPage };
 }
 
 // Choose the font for a character: the main font if it has the glyph,
@@ -344,4 +345,4 @@ function drawUnderline(doc, style, x, y, w, lw, color) {
   doc.restore();
 }
 
-module.exports = { render, columns, PAPER };
+module.exports = { render, geometry, PAPER };

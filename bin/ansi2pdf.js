@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 const { parseArgs } = require('util');
 const { emulate } = require('../src/emulate');
-const { render, columns, PAPER } = require('../src/render');
+const { render, geometry, PAPER } = require('../src/render');
 
 const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
 
@@ -33,6 +33,8 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
                          font for characters the main font does not have;
                          can be repeated, and is tried before the default
                          ones (Noto Sans Mono, Menlo, DejaVu Sans Mono)
+      --geometry         print the columns and lines of a logical page for
+                         the given options, as "COLS LINES", and exit
   -h, --help             show this help
 `;
 
@@ -90,6 +92,7 @@ async function main() {
       font: { type: 'string' },
       'bold-font': { type: 'string' },
       'fallback-font': { type: 'string', multiple: true },
+      geometry: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
     },
   });
@@ -101,11 +104,7 @@ async function main() {
   if (!font) throw new Error('font not found; specify --font');
   const boldFont = o['bold-font'] ?? (o.font ? null : findFont('BIZUDGothic-Bold.ttf'));
 
-  const input = files.length
-    ? files.map((f) => fs.readFileSync(f, 'utf8')).join('')
-    : fs.readFileSync(0, 'utf8');
-
-  const num = (v) => (v === undefined ? undefined : Number(v));
+  const num =(v) => (v === undefined ? undefined : Number(v));
   const opt = {
     paper: o.paper, landscape: o.portrait ? false : o.landscape, lines: num(o.lines), width: num(o.width),
     pane: o.pane, border: o.border, header: o.header, gap: num(o.gap),
@@ -113,8 +112,15 @@ async function main() {
     fontSize: num(o['font-size']), margin: num(o.margin), lineHeight: num(o['line-height']),
     font, boldFont, fallbackFonts: fallbackFonts(o['fallback-font']),
   };
+  const geom = geometry(opt);
+  // tell the size of a logical page to a program that formats the input
+  if (o.geometry) { process.stdout.write(`${geom.cols} ${geom.lines}\n`); return; }
+
+  const input = files.length
+    ? files.map((f) => fs.readFileSync(f, 'utf8')).join('')
+    : fs.readFileSync(0, 'utf8');
   // run the terminal with the width of a logical page, so that long lines wrap
-  const screen = await emulate(input, { cols: columns(opt) });
+  const screen = await emulate(input, { cols: geom.cols });
 
   if (!o.output && process.stdout.isTTY) throw new Error('refusing to write PDF to a terminal; use -o');
   const out = o.output ? fs.createWriteStream(o.output) : process.stdout;

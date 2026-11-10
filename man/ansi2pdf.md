@@ -117,6 +117,12 @@ file given by **--output**; it is not written to a terminal.
     be repeated, and the fonts are tried in order before the default
     ones described in FONTS.
 
+**--geometry**
+:   Print the number of columns and lines of a logical page for the
+    given options, as "*COLS* *LINES*", and exit without reading the
+    input.  A program that formats text for the page, such as
+    **nup**(1), uses it to know the size to format for.
+
 **-h**, **--help**
 :   Show a summary of the options.
 
