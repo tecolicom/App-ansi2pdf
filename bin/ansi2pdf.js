@@ -12,7 +12,7 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
 
   -o, --output FILE      output file (default: stdout)
   -c, --cols N           columns (default: measured from input)
-  -l, --lines N          lines per page (default: fit to the paper)
+  -l, --lines N          lines per page (default: 60)
   -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4)
   -L, --landscape        landscape orientation
   -U, --up N             logical pages per sheet: 1, 2, 3, 4, 6, 8, 9 (default: 2)
@@ -49,7 +49,7 @@ async function main() {
     options: {
       output: { type: 'string', short: 'o' },
       cols: { type: 'string', short: 'c' },
-      lines: { type: 'string', short: 'l' },
+      lines: { type: 'string', short: 'l', default: '60' },
       paper: { type: 'string', short: 'p', default: 'a4' },
       landscape: { type: 'boolean', short: 'L' },
       up: { type: 'string', short: 'U', default: '2' },
