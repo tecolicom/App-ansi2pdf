@@ -65,7 +65,7 @@ file given by **--output**; it is not written to a terminal.
 **-P**, **--portrait**
 :   Use the paper in portrait orientation.  Without **-L** or **-P**,
     the paper is landscape when **-C** has more columns than rows.
-    **-L** and **-P** cannot be used together.
+    When both are given, the last one is used.
 
 **-p**, **--paper** *NAME*
 :   Paper size: **a3**, **a4**, **a5**, **b4**, **b5**, **letter** or

@@ -71,9 +71,10 @@ function findFont(name) {
 }
 
 async function main() {
-  const { values: o, positionals: files } = parseArgs({
+  const { values: o, positionals: files, tokens } = parseArgs({
     allowPositionals: true,
     allowNegative: true,
+    tokens: true,
     options: {
       output: { type: 'string', short: 'o' },
       width: { type: 'string', short: 'w' },
@@ -97,7 +98,10 @@ async function main() {
     },
   });
   if (o.help) { process.stdout.write(USAGE); return; }
-  if (o.landscape && o.portrait) throw new Error('-L and -P cannot be used together');
+  // the last of -L, -P and --no-landscape decides the orientation
+  const last = tokens
+    .filter((t) => t.kind === 'option' && ['landscape', 'portrait'].includes(t.name)).pop();
+  const landscape = last && (last.name === 'landscape') !== last.rawName.startsWith('--no-');
   if (!PAPER[o.paper.toLowerCase()]) throw new Error(`unknown paper: ${o.paper}`);
 
   const font = o.font ?? findFont('BIZUDGothic-Regular.ttf');
@@ -106,7 +110,7 @@ async function main() {
 
   const num =(v) => (v === undefined ? undefined : Number(v));
   const opt = {
-    paper: o.paper, landscape: o.portrait ? false : o.landscape, lines: num(o.lines), width: num(o.width),
+    paper: o.paper, landscape, lines: num(o.lines), width: num(o.width),
     pane: o.pane, border: o.border, header: o.header, gap: num(o.gap),
     title: o.title ?? (files.length === 1 ? path.basename(files[0]) : ''),
     fontSize: num(o['font-size']), margin: num(o.margin), lineHeight: num(o['line-height']),
