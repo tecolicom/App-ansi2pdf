@@ -2,17 +2,32 @@
   "name": "ansi2pdf",
   "version": "0.1.0",
   "description": "Render terminal output with ANSI sequences to PDF",
-  "main": "src/render.js",
-  "scripts": {
-    "test": "node --test"
-  },
+  "license": "MIT",
   "author": "Kazumasa Utashiro",
-  "dependencies": {
-    "@xterm/headless": "^6.0.0",
-    "pdfkit": "^0.20.2"
-  },
   "private": true,
   "bin": {
     "ansi2pdf": "bin/ansi2pdf.js"
+  },
+  "man": [
+    "./man/ansi2pdf.1"
+  ],
+  "main": "src/render.js",
+  "files": [
+    "bin/",
+    "src/",
+    "man/ansi2pdf.1",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.16"
+  },
+  "scripts": {
+    "test": "node --test",
+    "man": "pandoc -s -f markdown-smart -t man man/ansi2pdf.md -o man/ansi2pdf.1"
+  },
+  "dependencies": {
+    "@xterm/headless": "^6.0.0",
+    "pdfkit": "^0.20.2"
   }
 }
