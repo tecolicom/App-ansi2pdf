@@ -80,6 +80,12 @@ test('fallback font and missing glyphs', { skip: !(FONT && FALLBACK) && 'font no
   assert.deepStrictEqual([...fb.info.missing], [['ก', 1]]);
 });
 
+test('variation selectors are not missing glyphs', { skip: !FONT && 'font not found' }, async () => {
+  // an ideographic variation sequence, and a variation selector of emoji style
+  const { info } = await pdf('\u{845b}\u{e0100} \u{8fbb}\u{e0101} \u{2460}\u{fe0e}\n', {});
+  assert.deepStrictEqual([...info.missing], []);
+});
+
 test('paper name with orientation', () => {
   const { parsePaper } = require('../src/render');
   const P = (paper, landscape, margin) => ({ paper, landscape, margin });

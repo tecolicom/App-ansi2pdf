@@ -192,7 +192,8 @@ function fontPicker(doc, fallbacks = []) {
       if (!cache.has(key)) {
         // variation selectors and joiners are not glyphs to look for
         const cps = [...text].map((c) => c.codePointAt(0))
-          .filter((cp) => !(cp >= 0xfe00 && cp <= 0xfe0f) && cp !== 0x200d);
+          .filter((cp) => !(cp >= 0xfe00 && cp <= 0xfe0f)
+            && !(cp >= 0xe0100 && cp <= 0xe01ef) && cp !== 0x200d);
         cache.set(key, has(main, cps) ? main : names.find((n) => has(n, cps)) ?? null);
       }
       const name = cache.get(key);
