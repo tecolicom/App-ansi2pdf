@@ -10,6 +10,16 @@ const PAPER = {
   b4: [728.5, 1031.81], b5: [515.91, 728.5], letter: [612, 792], legal: [612, 1008],
 };
 
+// A paper name may end with the orientation, as a4p, a4l or letter-l.
+// A known name is taken as it is, so that legal is not lega in landscape.
+function parsePaper(name) {
+  const s = String(name).toLowerCase();
+  if (PAPER[s]) return { paper: s, landscape: undefined };
+  const m = s.match(/^(.+?)-?([pl])$/);
+  if (!m || !PAPER[m[1]]) return null;
+  return { paper: m[1], landscape: m[2] === 'l' };
+}
+
 // xterm.js default palette for the 16 colors
 const ANSI16 = [
   '#2e3436', '#cc0000', '#4e9a06', '#c4a000', '#3465a4', '#75507b', '#06989a', '#d3d7cf',
@@ -361,4 +371,4 @@ function drawUnderline(doc, style, x, y, w, lw, color) {
   doc.restore();
 }
 
-module.exports = { render, geometry, PAPER };
+module.exports = { render, geometry, parsePaper, PAPER };

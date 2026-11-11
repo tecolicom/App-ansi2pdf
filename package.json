@@ -1,6 +1,6 @@
 {
   "name": "ansi2pdf",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Render terminal output with ANSI sequences to PDF",
   "license": "MIT",
   "author": "Kazumasa Utashiro",

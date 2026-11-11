@@ -2,7 +2,7 @@
 title: ANSI2PDF
 section: 1
 header: User Commands
-footer: ansi2pdf 0.1.2
+footer: ansi2pdf 0.1.3
 ---
 
 # NAME
@@ -77,11 +77,16 @@ file given by **--output**; it is not written to a terminal.
 **-P**, **--portrait**
 :   Use the paper in portrait orientation.  Without **-L** or **-P**,
     the paper is landscape when **-C** has more columns than rows.
-    When both are given, the last one is used.
+    When both are given, the last one is used.  An orientation given
+    with the paper name (**-p a4p**) counts as well.
 
 **-p**, **--paper** *NAME*
 :   Paper size: **a3**, **a4**, **a5**, **b4**, **b5**, **letter** or
-    **legal**.  Default is **a4**.
+    **legal**.  Default is **a4**.  The letter **p** or **l** after the
+    name gives the orientation as well: **a4p** is A4 in portrait and
+    **a4l** is A4 in landscape, the same as **-p a4 -P** and
+    **-p a4 -L**.  A hyphen may be put before the letter, as
+    **letter-l**.
 
 **-l**, **--lines** *N*
 :   Number of lines on a logical page.  The font size is chosen to fit

@@ -79,3 +79,32 @@ test('fallback font and missing glyphs', { skip: !(FONT && FALLBACK) && 'font no
   const fb = await pdf(input, { fallbackFonts: [{ src: FALLBACK, family: 'Menlo-Regular' }] });
   assert.deepStrictEqual([...fb.info.missing], [['ก', 1]]);
 });
+
+test('paper name with orientation', () => {
+  const { parsePaper } = require('../src/render');
+  assert.deepStrictEqual(parsePaper('a4'), { paper: 'a4', landscape: undefined });
+  assert.deepStrictEqual(parsePaper('a4p'), { paper: 'a4', landscape: false });
+  assert.deepStrictEqual(parsePaper('a4l'), { paper: 'a4', landscape: true });
+  assert.deepStrictEqual(parsePaper('A4L'), { paper: 'a4', landscape: true });
+  assert.deepStrictEqual(parsePaper('letter-p'), { paper: 'letter', landscape: false });
+  assert.deepStrictEqual(parsePaper('b5-l'), { paper: 'b5', landscape: true });
+  // a name that ends with "l" is not taken as landscape
+  assert.deepStrictEqual(parsePaper('legal'), { paper: 'legal', landscape: undefined });
+  assert.deepStrictEqual(parsePaper('legall'), { paper: 'legal', landscape: true });
+  for (const name of ['a9', 'a4r', 'a4-', 'p', 'a4pl', '']) assert.strictEqual(parsePaper(name), null, name);
+});
+
+test('the last of -L, -P and the paper decides the orientation', { skip: !FONT && 'font not found' }, () => {
+  const { execFileSync } = require('child_process');
+  const bin = path.join(__dirname, '../bin/ansi2pdf.js');
+  const geom = (...args) => execFileSync(process.execPath, [bin, '--geometry', '-C1', ...args], { encoding: 'utf8' });
+  const land = geom('-L'), port = geom('-P');
+  assert.notStrictEqual(land, port);
+  assert.strictEqual(geom('-p', 'a4l'), land);
+  assert.strictEqual(geom('-p', 'a4p'), port);
+  assert.strictEqual(geom('-p', 'a4'), port);          // -C1 is portrait by itself
+  assert.strictEqual(geom('-L', '-p', 'a4p'), port);
+  assert.strictEqual(geom('-p', 'a4p', '-L'), land);
+  assert.strictEqual(geom('-L', '-p', 'a4'), land);    // a bare name leaves the orientation
+  assert.throws(() => geom('-p', 'a4r'), /unknown paper/);
+});

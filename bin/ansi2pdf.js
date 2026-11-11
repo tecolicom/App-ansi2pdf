@@ -6,7 +6,7 @@ const os = require('os');
 const path = require('path');
 const { parseArgs } = require('util');
 const { emulate } = require('../src/emulate');
-const { render, geometry, PAPER } = require('../src/render');
+const { render, geometry, parsePaper, PAPER } = require('../src/render');
 
 const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
 
@@ -15,10 +15,13 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
                          page when -w or -s is given)
   -w, --width N          columns of a line; longer lines are wrapped as on a
                          terminal (default: as many as fit the page)
-  -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4)
+  -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4);
+                         p or l after the name gives the orientation, as
+                         a4p for portrait, a4l or letter-l for landscape
   -L, --landscape        landscape orientation
   -P, --portrait         portrait orientation
-                         (default: landscape when -C has more columns than rows)
+                         (default: landscape when -C has more columns than rows;
+                         the last of -L, -P and -p with an orientation is used)
   -C, --pane C[,R]       logical pages on a sheet in C columns and R rows,
                          as 2 or 2,2 (default: 2)
   -B, --[no-]border      draw a border around each logical page (default: on)
@@ -111,11 +114,16 @@ async function main() {
     },
   });
   if (o.help) { process.stdout.write(USAGE); return; }
-  // the last of -L, -P and --no-landscape decides the orientation
-  const last = tokens
-    .filter((t) => t.kind === 'option' && ['landscape', 'portrait'].includes(t.name)).pop();
-  const landscape = last && (last.name === 'landscape') !== last.rawName.startsWith('--no-');
-  if (!PAPER[o.paper.toLowerCase()]) throw new Error(`unknown paper: ${o.paper}`);
+  const paper = parsePaper(o.paper);
+  if (!paper) throw new Error(`unknown paper: ${o.paper}`);
+  // the last of -L, -P, --no-landscape and a paper name with an orientation
+  // (-p a4p) decides the orientation
+  const landscape = tokens.reduce((land, t) => {
+    if (t.kind !== 'option') return land;
+    if (t.name === 'paper') return parsePaper(t.value)?.landscape ?? land;
+    if (!['landscape', 'portrait'].includes(t.name)) return land;
+    return (t.name === 'landscape') !== t.rawName.startsWith('--no-');
+  }, undefined);
 
   let font = o.font ?? findFont('BIZUDGothic-Regular.ttf');
   let boldFont = o['bold-font'] ?? (o.font ? null : findFont('BIZUDGothic-Bold.ttf'));
@@ -129,7 +137,7 @@ async function main() {
 
   const num =(v) => (v === undefined ? undefined : Number(v));
   const opt = {
-    paper: o.paper, landscape, lines: num(o.lines), width: num(o.width),
+    paper: paper.paper, landscape, lines: num(o.lines), width: num(o.width),
     pane: o.pane, border: o.border, header: o.header, gap: num(o.gap),
     title: o.title ?? (files.length === 1 ? path.basename(files[0]) : ''),
     fontSize: num(o['font-size']), margin: num(o.margin), lineHeight: num(o['line-height']),
