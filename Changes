@@ -1,0 +1,44 @@
+Revision history for ansi2pdf
+
+0.1.3 2026-11-11T03:00:20Z
+
+    - The orientation can be given with the paper name: "-p a4p" is
+      A4 in portrait and "-p a4l" is A4 in landscape, the same as
+      "-p a4 -P" and "-p a4 -L"; a hyphen may be put before the
+      letter, as "-p letter-l"
+    - It counts with -L and -P, the last of which decides the
+      orientation; a name without the letter leaves the orientation
+      as it was
+
+0.1.2 2026-11-10T13:14:14Z
+
+    - The lines (-l), the columns (-w) and the font size (-s) follow
+      each other: the ones that are given are kept, and the others
+      are decided to fill the page
+    - The default of 60 lines is used only when none of them is
+      given; it was always used, so that -w left a part of the page
+      blank, and -s with a large font put 60 lines beyond the page
+
+0.1.1 2026-11-10T12:55:17Z
+
+    - Separate the columns and the rows of -C with a comma, as
+      "-C 2,2"; "-C 2.2" of 0.1.0 is no longer accepted
+
+0.1.0 2026-11-10T11:44:33Z
+
+    - First version, which renders terminal output with ANSI
+      sequences to PDF
+    - Colors, bold, faint, italic, underlines of every style and
+      color, reverse video, strikethrough and overline are kept; box
+      drawing characters and block elements are drawn as lines and
+      rectangles
+    - The input is interpreted by xterm.js, so cursor movement,
+      background fill, wide characters and line wrapping come out as
+      on a terminal; a form feed and clearing the screen start a new
+      page
+    - Logical pages are arranged on a sheet with -C, with a border
+      (-B) and a header (-H)
+    - Characters missing in the main font are drawn with fallback
+      fonts; without BIZ UDGothic, Menlo or DejaVu Sans Mono is used
+    - --geometry tells the size of a logical page to a program that
+      formats text for it
