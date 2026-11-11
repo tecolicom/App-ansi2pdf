@@ -91,6 +91,13 @@ orientation as well: \f[B]a4p\f[R] is A4 in portrait and \f[B]a4l\f[R]
 is A4 in landscape, the same as \f[B]\-p a4 \-P\f[R] and \f[B]\-p a4
 \-L\f[R].
 A hyphen may be put before the letter, as \f[B]letter\-l\f[R].
+.RS
+The margin in millimeters may follow them after \f[B]:m\f[R], the same
+as \f[B]\-m\f[R]: \f[B]a4p:m10\f[R] is A4 in portrait with a margin of
+10 mm, and \f[B]a4:m0\f[R] is A4 without a margin.
+This lets a program give how to use the paper in one word, as \f[B]nup
+\-T a4p:m10\f[R].
+.RE
 .TP
 \f[B]\-l\f[R], \f[B]\-\-lines\f[R] \f[I]N\f[R]
 Number of lines on a logical page.
@@ -125,7 +132,9 @@ Default is \f[B]6\f[R].
 .TP
 \f[B]\-m\f[R], \f[B]\-\-margin\f[R] \f[I]MM\f[R]
 Margin of the sheet in millimeters.
-Default is \f[B]10\f[R].
+Default is \f[B]5\f[R].
+A margin given with the paper name (\f[B]\-p a4:m10\f[R]) counts as
+well, and the last one is used.
 .TP
 \f[B]\-s\f[R], \f[B]\-\-font\-size\f[R] \f[I]PT\f[R]
 Font size in points.

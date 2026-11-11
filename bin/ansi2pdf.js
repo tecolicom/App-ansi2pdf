@@ -17,7 +17,8 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
                          terminal (default: as many as fit the page)
   -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4);
                          p or l after the name gives the orientation, as
-                         a4p for portrait, a4l or letter-l for landscape
+                         a4p for portrait, a4l or letter-l for landscape;
+                         :mN after them gives the margin, as a4p:m10
   -L, --landscape        landscape orientation
   -P, --portrait         portrait orientation
                          (default: landscape when -C has more columns than rows;
@@ -30,7 +31,7 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
       --gap MM           space between logical pages in mm (default: 6)
   -s, --font-size PT     font size (default: the size for the lines and the
                          columns to fill the page)
-  -m, --margin MM        margin in mm (default: 10)
+  -m, --margin MM        margin in mm (default: 5)
       --line-height R    line height relative to the font size (default: 1.2)
       --font FILE        font file (default: BIZ UDGothic)
       --bold-font FILE   bold font file
@@ -124,6 +125,12 @@ async function main() {
     if (!['landscape', 'portrait'].includes(t.name)) return land;
     return (t.name === 'landscape') !== t.rawName.startsWith('--no-');
   }, undefined);
+  // and the last of -m and a paper name with a margin (-p a4:m10), the margin
+  const margin = tokens.reduce((mm, t) => {
+    if (t.kind !== 'option') return mm;
+    if (t.name === 'paper') return parsePaper(t.value)?.margin ?? mm;
+    return t.name === 'margin' ? Number(t.value) : mm;
+  }, undefined);
 
   let font = o.font ?? findFont('BIZUDGothic-Regular.ttf');
   let boldFont = o['bold-font'] ?? (o.font ? null : findFont('BIZUDGothic-Bold.ttf'));
@@ -140,7 +147,7 @@ async function main() {
     paper: paper.paper, landscape, lines: num(o.lines), width: num(o.width),
     pane: o.pane, border: o.border, header: o.header, gap: num(o.gap),
     title: o.title ?? (files.length === 1 ? path.basename(files[0]) : ''),
-    fontSize: num(o['font-size']), margin: num(o.margin), lineHeight: num(o['line-height']),
+    fontSize: num(o['font-size']), margin, lineHeight: num(o['line-height']),
     font, boldFont, fallbackFonts: fallbackFonts(o['fallback-font']),
   };
   const geom = geometry(opt);

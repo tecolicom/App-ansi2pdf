@@ -88,6 +88,11 @@ file given by **--output**; it is not written to a terminal.
     **-p a4 -L**.  A hyphen may be put before the letter, as
     **letter-l**.
 
+    The margin in millimeters may follow them after **:m**, the same
+    as **-m**: **a4p:m10** is A4 in portrait with a margin of 10 mm,
+    and **a4:m0** is A4 without a margin.  This lets a program give
+    how to use the paper in one word, as **nup -T a4p:m10**.
+
 **-l**, **--lines** *N*
 :   Number of lines on a logical page.  The font size is chosen to fit
     them.  Default is **60**, or as many lines as fit the page when
@@ -116,7 +121,9 @@ file given by **--output**; it is not written to a terminal.
 :   Space between logical pages in millimeters.  Default is **6**.
 
 **-m**, **--margin** *MM*
-:   Margin of the sheet in millimeters.  Default is **10**.
+:   Margin of the sheet in millimeters.  Default is **5**.  A margin
+    given with the paper name (**-p a4:m10**) counts as well, and the
+    last one is used.
 
 **-s**, **--font-size** *PT*
 :   Font size in points.  The page has as many lines and columns as fit

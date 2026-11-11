@@ -12,12 +12,26 @@ const PAPER = {
 
 // A paper name may end with the orientation, as a4p, a4l or letter-l.
 // A known name is taken as it is, so that legal is not lega in landscape.
+// Parameters of the paper may follow a colon, each with a letter for
+// what it is: m for the margin in mm, as a4p:m5.  More of them would be
+// separated by commas.
+const PAPER_PARAMS = { m: 'margin' };
 function parsePaper(name) {
-  const s = String(name).toLowerCase();
-  if (PAPER[s]) return { paper: s, landscape: undefined };
-  const m = s.match(/^(.+?)-?([pl])$/);
-  if (!m || !PAPER[m[1]]) return null;
-  return { paper: m[1], landscape: m[2] === 'l' };
+  const [size, params, ...rest] = String(name).toLowerCase().split(':');
+  if (rest.length) return null;
+  const spec = { paper: size, landscape: undefined, margin: undefined };
+  if (!PAPER[size]) {
+    const m = size.match(/^(.+?)-?([pl])$/);
+    if (!m || !PAPER[m[1]]) return null;
+    spec.paper = m[1];
+    spec.landscape = m[2] === 'l';
+  }
+  for (const p of params === undefined ? [] : params.split(',')) {
+    const m = p.match(/^([a-z])(\d+(?:\.\d+)?)$/);
+    if (!m || !PAPER_PARAMS[m[1]]) return null;
+    spec[PAPER_PARAMS[m[1]]] = Number(m[2]);
+  }
+  return spec;
 }
 
 // xterm.js default palette for the 16 colors
@@ -90,10 +104,11 @@ function sheetLayout(opt) {
 //   fontSize         the lines and the columns that fit
 // With none of them, the lines are DEFAULT_LINES.
 const DEFAULT_LINES = 60;
+const DEFAULT_MARGIN = 5;  // mm
 
 function layout(doc, opt) {
   const { gc, gr, size: [pw, ph] } = sheetLayout(opt);
-  const margin = (opt.margin ?? 10) * MM;
+  const margin = (opt.margin ?? DEFAULT_MARGIN) * MM;
   const gap = (opt.gap ?? 6) * MM;
   const pad = opt.border ? (opt.padding ?? 2) * MM : 0;
   const lineHeight = opt.lineHeight ?? 1.2;

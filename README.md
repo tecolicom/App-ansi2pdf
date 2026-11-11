@@ -84,7 +84,7 @@ command | ansi2pdf [options] -o out.pdf
 | `-o FILE` | output file | stdout |
 | `-C C[,R]` | logical pages on a sheet: `2`, `2,2`, ... | `2` |
 | `-L`, `-P` | landscape, portrait | landscape when more columns than rows |
-| `-p NAME` | paper: a3, a4, a5, b4, b5, letter, legal; with the orientation as `a4p`, `a4l`, `letter-l` | `a4` |
+| `-p NAME` | paper: a3, a4, a5, b4, b5, letter, legal; with the orientation as `a4p`, `a4l`, `letter-l`, and the margin as `a4p:m10` | `a4` |
 | `-l N` | lines per page | `60`, or what fits with `-w` |
 | `-w N` | columns of the terminal | as many as fit the page |
 | `-B`, `--no-border` | border around each page | on |

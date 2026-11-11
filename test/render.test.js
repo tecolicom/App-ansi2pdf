@@ -82,16 +82,24 @@ test('fallback font and missing glyphs', { skip: !(FONT && FALLBACK) && 'font no
 
 test('paper name with orientation', () => {
   const { parsePaper } = require('../src/render');
-  assert.deepStrictEqual(parsePaper('a4'), { paper: 'a4', landscape: undefined });
-  assert.deepStrictEqual(parsePaper('a4p'), { paper: 'a4', landscape: false });
-  assert.deepStrictEqual(parsePaper('a4l'), { paper: 'a4', landscape: true });
-  assert.deepStrictEqual(parsePaper('A4L'), { paper: 'a4', landscape: true });
-  assert.deepStrictEqual(parsePaper('letter-p'), { paper: 'letter', landscape: false });
-  assert.deepStrictEqual(parsePaper('b5-l'), { paper: 'b5', landscape: true });
+  const P = (paper, landscape, margin) => ({ paper, landscape, margin });
+  assert.deepStrictEqual(parsePaper('a4'), P('a4'));
+  assert.deepStrictEqual(parsePaper('a4p'), P('a4', false));
+  assert.deepStrictEqual(parsePaper('a4l'), P('a4', true));
+  assert.deepStrictEqual(parsePaper('A4L'), P('a4', true));
+  assert.deepStrictEqual(parsePaper('letter-p'), P('letter', false));
+  assert.deepStrictEqual(parsePaper('b5-l'), P('b5', true));
   // a name that ends with "l" is not taken as landscape
-  assert.deepStrictEqual(parsePaper('legal'), { paper: 'legal', landscape: undefined });
-  assert.deepStrictEqual(parsePaper('legall'), { paper: 'legal', landscape: true });
-  for (const name of ['a9', 'a4r', 'a4-', 'p', 'a4pl', '']) assert.strictEqual(parsePaper(name), null, name);
+  assert.deepStrictEqual(parsePaper('legal'), P('legal'));
+  assert.deepStrictEqual(parsePaper('legall'), P('legal', true));
+  // the margin in mm after a colon
+  assert.deepStrictEqual(parsePaper('a4:m5'), P('a4', undefined, 5));
+  assert.deepStrictEqual(parsePaper('a4p:m3'), P('a4', false, 3));
+  assert.deepStrictEqual(parsePaper('A3L:M0'), P('a3', true, 0));
+  assert.deepStrictEqual(parsePaper('letter-l:m2.5'), P('letter', true, 2.5));
+  for (const name of ['a9', 'a4r', 'a4-', 'p', 'a4pl', '', 'a4:', 'a4:5', 'a4:m', 'a4:mx', 'a4:m5,', 'a4:x5', ':m5', 'a4:m5:m3']) {
+    assert.strictEqual(parsePaper(name), null, name);
+  }
 });
 
 test('the last of -L, -P and the paper decides the orientation', { skip: !FONT && 'font not found' }, () => {
@@ -107,4 +115,19 @@ test('the last of -L, -P and the paper decides the orientation', { skip: !FONT &
   assert.strictEqual(geom('-p', 'a4p', '-L'), land);
   assert.strictEqual(geom('-L', '-p', 'a4'), land);    // a bare name leaves the orientation
   assert.throws(() => geom('-p', 'a4r'), /unknown paper/);
+});
+
+test('the last of -m and the paper decides the margin', { skip: !FONT && 'font not found' }, () => {
+  const { execFileSync } = require('child_process');
+  const bin = path.join(__dirname, '../bin/ansi2pdf.js');
+  const geom = (...args) => execFileSync(process.execPath, [bin, '--geometry', '-C1', '-L', ...args], { encoding: 'utf8' });
+  const m5 = geom('-m', '5'), m10 = geom('-m', '10'), m0 = geom('-m', '0');
+  assert.notStrictEqual(m5, m10);
+  assert.strictEqual(geom(), m5);                        // the default is 5 mm
+  assert.strictEqual(geom('-p', 'a4:m10'), m10);
+  assert.strictEqual(geom('-p', 'a4l:m0'), m0);
+  assert.strictEqual(geom('-m', '10', '-p', 'a4:m0'), m0);
+  assert.strictEqual(geom('-p', 'a4:m0', '-m', '10'), m10);
+  assert.strictEqual(geom('-m', '10', '-p', 'a4'), m10);  // a bare name leaves the margin
+  assert.throws(() => geom('-p', 'a4:5'), /unknown paper/);
 });
