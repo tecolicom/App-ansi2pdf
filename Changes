@@ -1,5 +1,16 @@
 Revision history for ansi2pdf
 
+0.1.4 2026-11-11T04:25:48Z
+
+    - The margin can be given with the paper name after ":m", the
+      same as -m: "-p a4p:m10" is A4 in portrait with a margin of
+      10 mm, and "-p a4:m0" is A4 without a margin; the last of -m
+      and such a paper name is used
+    - The default margin is 5 mm; it was 10 mm, which is for printing
+      and binding, and is too wide to read the PDF on a screen.  The
+      same options now give a slightly larger font and fewer columns;
+      give -m 10 for the margin of the earlier versions
+
 0.1.3 2026-11-11T03:00:20Z
 
     - The orientation can be given with the paper name: "-p a4p" is
