@@ -2,7 +2,7 @@
 title: ANSI2PDF
 section: 1
 header: User Commands
-footer: ansi2pdf 0.1.4
+footer: ansi2pdf 0.1.5
 ---
 
 # NAME

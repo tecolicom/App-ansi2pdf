@@ -1,5 +1,11 @@
 Revision history for ansi2pdf
 
+0.1.5 2026-11-11T09:23:38Z
+
+    - A kanji with an ideographic variation selector (U+E0100 to
+      U+E01EF) is no longer reported as "no font has"; it was drawn
+      correctly, and only the message was wrong
+
 0.1.4 2026-11-11T04:25:48Z
 
     - The margin can be given with the paper name after ":m", the
