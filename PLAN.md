@@ -55,16 +55,20 @@
 
 ## nup との連携
 
-最終的には nup に PDF を作るオプション（`nup --pdf[=FILE]`）を付ける。ansi2pdf は単独でも使える。
+nup に PDF を作るオプションを付ける。ansi2pdf は単独でも使える。
+nup では出力する装置を `-T` で指定する。既定は端末（`tty`）で、用紙の名前（`a4`、`a4p`、`a3l` など）を書くと PDF になる。出力先は `-o FILE`、なければ標準出力。
 
 - 分担：nup（ansicolumn）が組版（段組み、枠、ページ番号、折り返し、禁則）、ansi2pdf が印字（フォント、色、罫線、紙）。
   枠は nup が描く。nup から呼ばれた ansi2pdf は、面付けも枠も付けず、1画面を紙1枚に印字する。
 - nup の流れは `nup → optex -Mup（up.pm）→ ansicolumn → ページャ`。PDF にするのは「端末の代わりに紙、less の代わりに ansi2pdf」に差し替えるだけ。
-  1. `up.pm` が `ansi2pdf --geometry -C1 --no-border …` を呼び、答え（桁数と行数）を端末の大きさの代わりに使う。
+  1. `up.pm` が `ansi2pdf -C1 --no-border -L … --geometry` を呼び、答え（桁数と行数）を端末の大きさの代わりに使う。
   2. ansicolumn に `-w` と `--height` を明示して渡す。
   3. ページャを `ansi2pdf -C1 --no-border -w 桁数 -l 行数 -o FILE` にする。
-- 紙の大きさ・向き・行数は、nup の `--pdf-opts` で ansi2pdf のオプションをそのまま渡す。
-- 状況（2026-11-10）：ansi2pdf の `--geometry` は済。nup の `--pdf`・`--pdf-opts` は App-nup の作業ツリーに実装済みで、未コミット。nup の既定は横向き（`-L`）で、`--pdf-opts=-P` で縦にできる（後の指定が勝つ）。`-P`（ページの高さ）は PDF では使わない。
+- 紙の大きさと向きは、nup の `-T` の値をそのまま ansi2pdf の `-p` に渡す（`-p a4p` は A4 縦、`-p a4l` は A4 横）。用紙の名前を知っているのは ansi2pdf だけ。
+  そのほか（行数、余白、フォントなど）は、nup の `--pdf-opts` で ansi2pdf のオプションをそのまま渡す。
+- 状況（2026-11-11）：ansi2pdf の `--geometry` は済。nup の `--pdf`・`--pdf-opts` は App-nup 1.11（2026-11-10）で公開済み。nup の既定は横向き（`-L`）で、`-T a4p` で縦にできる（後の指定が勝つ）。
+  `-T`・`-o` は App-nup 1.11 より後、`-p a4p` は ansi2pdf 0.1.3 から。1.11 の `--pdf[=FILE]` は `-T`・`-o` に置き換えて、なくした。
+  nup の `-P`（1ページの行数）と `-w`（紙1枚の桁数）は、ansi2pdf の `-l`・`-w` として渡る。`-P` は nup では行数、ansi2pdf では縦向きなので、`--pdf-opts` では `--portrait` と書く方が紛れない。
 - 段の区切りを OSC で伝えて論理的な順に描くことや、mdee からの利用は、そのあとで考える。
 
 ## 確認済みのこと
