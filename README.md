@@ -45,6 +45,12 @@ in ways that are not compatible with earlier versions, until version
 
 ## Installation
 
+With Homebrew:
+
+```sh
+brew install tecolicom/tap/app-ansi2pdf
+```
+
 From GitHub:
 
 ```sh
