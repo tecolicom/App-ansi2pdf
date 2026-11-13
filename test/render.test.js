@@ -137,3 +137,20 @@ test('the last of -m and the paper decides the margin', { skip: !FONT && 'font n
   assert.strictEqual(geom('-m', '10', '-p', 'a4'), m10);  // a bare name leaves the margin
   assert.throws(() => geom('-p', 'a4:5'), /unknown paper/);
 });
+
+test('block elements join the background of their color', async () => {
+  const { fills } = require('../src/render');
+  const green = '\x1b[38;2;30;77;43m', board = '\x1b[38;5;231;48;2;30;77;43m', off = '\x1b[m';
+  // a board: text on a background, with a border of half blocks in the
+  // same color as the foreground, and a block that has its own background
+  const screen = await emulate(`${green}▐${off}${board}ab${off}${green}▌${off} `
+                               + `\x1b[31;44m▄${off}\n`);
+  const L = { cw: 10, ch: 20 };
+  const { backgrounds, blocks } = fills(screen.lines[0], 0, { x: 0, y: 0 }, L);
+  // the border is in the same path as the board, not painted on its own
+  assert.deepStrictEqual(backgrounds.get('#1e4d2b').map((r) => r[0]).sort((a, b) => a - b),
+                         [5, 10, 30]);
+  // a block on a background is painted over it
+  assert.deepStrictEqual([...blocks.keys()].length, 1);
+  assert.deepStrictEqual([...blocks.values()][0].map((r) => r.slice(0, 2)), [[50, 10]]);
+});

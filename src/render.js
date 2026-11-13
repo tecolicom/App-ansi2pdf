@@ -246,53 +246,59 @@ function render(screen, out, opt = {}) {
   };
 }
 
+// Rectangles to fill for a row of cells, as [x, y, w, h], added to two maps
+// by color: the backgrounds, and the block elements to paint over them.
+// Block elements are filled as rectangles, as terminals do, since the font
+// glyphs of them do not fill the cell.  A block in a cell without a
+// background goes with the backgrounds of its color, to be in the same path
+// as what it adjoins: a border of half blocks around a board of the same
+// color, as --green-board of nup draws, shows a seam when painted apart.
+function fills(cells, row, origin, L, backgrounds = new Map(), blocks = new Map()) {
+  const add = (map, color, r) => (map.get(color) ?? map.set(color, []).get(color)).push(r);
+  const y = origin.y + row * L.ch;
+  let run = null;
+  const flush = () => {
+    if (run?.bg) add(backgrounds, run.bg, [origin.x + run.start * L.cw, y,
+                                          (run.end - run.start) * L.cw + 0.1, L.ch + 0.1]);
+  };
+  cells.forEach((cell, col) => {
+    if (cell.width === 0) return;
+    const { fg, bg } = colors(cell);
+    if (run && run.bg === bg && run.end === col) {
+      run.end = col + cell.width;
+    } else {
+      flush();
+      run = { bg, start: col, end: col + cell.width };
+    }
+    const b = !cell.invisible && blockOf(cell.ch);
+    if (!b) return;
+    const solid = b.shade === 1;
+    const color = solid ? fg : mix(bg ?? PAPER_COLOR, fg, b.shade);
+    const x = origin.x + col * L.cw, w = L.cw * cell.width;
+    // extend edges on the cell boundary a little, to join the next cell
+    for (const [x0, y0, x1, y1] of b.rects) {
+      add(solid && !bg ? backgrounds : blocks, color,
+          [x + x0 * w, y + y0 * L.ch, (x1 - x0) * w + (x1 === 1 ? 0.1 : 0),
+           (y1 - y0) * L.ch + (y1 === 1 ? 0.1 : 0)]);
+    }
+  });
+  flush();
+  return { backgrounds, blocks };
+}
+
 function drawPage(doc, page, origin, L) {
   const m = { fs: L.fs, ch: L.ch, lw: L.lw, base: L.base, fonts: L.fonts };
-  // Backgrounds first, so that glyphs and lines are drawn over them.
-  // Runs of a color are filled as one path per color: filling cells one by
-  // one leaves faint seams between them in reduced views.
-  const runs = new Map();
-  page.forEach((cells, row) => {
-    let run = null;
-    cells.forEach((cell, col) => {
-      if (cell.width === 0) return;
-      const { bg } = colors(cell);
-      if (run && run.bg === bg && run.end === col) {
-        run.end = col + cell.width;
-      } else {
-        run = { bg, row, start: col, end: col + cell.width };
-        if (bg) (runs.get(bg) ?? runs.set(bg, []).get(bg)).push(run);
-      }
-    });
-  });
-  for (const [bg, list] of runs) {
-    for (const r of list) {
-      doc.rect(origin.x + r.start * L.cw, origin.y + r.row * L.ch,
-               (r.end - r.start) * L.cw + 0.1, L.ch + 0.1);
+  // Backgrounds first, so that glyphs and lines are drawn over them, then
+  // the block elements that are on a background.  Each color is filled as
+  // one path: filling cells one by one leaves faint seams between them in
+  // reduced views.
+  const backgrounds = new Map(), blocks = new Map();
+  page.forEach((cells, row) => fills(cells, row, origin, L, backgrounds, blocks));
+  for (const map of [backgrounds, blocks]) {
+    for (const [color, list] of map) {
+      for (const r of list) doc.rect(...r);
+      doc.fill(color);
     }
-    doc.fill(bg);
-  }
-  // Block elements are filled as rectangles, as terminals do, also as one
-  // path per color.  Font glyphs of them do not fill the cell.
-  const blocks = new Map();
-  page.forEach((cells, row) => {
-    cells.forEach((cell, col) => {
-      const b = cell.width && !cell.invisible && blockOf(cell.ch);
-      if (!b) return;
-      const { fg, bg } = colors(cell);
-      const color = b.shade < 1 ? mix(bg ?? PAPER_COLOR, fg, b.shade) : fg;
-      const x = origin.x + col * L.cw, y = origin.y + row * L.ch, w = L.cw * cell.width;
-      const list = blocks.get(color) ?? blocks.set(color, []).get(color);
-      // extend edges on the cell boundary a little, to join the next cell
-      for (const [x0, y0, x1, y1] of b.rects) {
-        list.push([x + x0 * w, y + y0 * L.ch, (x1 - x0) * w + (x1 === 1 ? 0.1 : 0),
-                   (y1 - y0) * L.ch + (y1 === 1 ? 0.1 : 0)]);
-      }
-    });
-  });
-  for (const [color, list] of blocks) {
-    for (const r of list) doc.rect(...r);
-    doc.fill(color);
   }
   page.forEach((cells, row) => {
     const y = origin.y + row * L.ch;
@@ -387,4 +393,4 @@ function drawUnderline(doc, style, x, y, w, lw, color) {
   doc.restore();
 }
 
-module.exports = { render, geometry, parsePaper, PAPER };
+module.exports = { render, geometry, parsePaper, PAPER, fills };
