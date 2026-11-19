@@ -1,0 +1,62 @@
+name: Release
+
+# A tag of a version (v0.1.6) makes a GitHub Release with the entries of
+# that version in Changes, and has www.tecoli.com rebuilt so that the
+# release is listed there.  A release made by a workflow does not give a
+# release event, so the site is told here and not in a workflow of its own.
+on:
+  push:
+    tags: ['v[0-9]*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check that the tag is the version of the package
+        run: |
+          test "v$(jq -r .version package.json)" = "$VERSION"
+
+      - name: Write the release notes
+        run: |
+          awk -v v="${VERSION#v}" '
+              $1 == v     { on = 1; next }
+              on && /^[0-9]/ { exit }
+              on          { sub(/^    /, ""); print }
+          ' Changes > notes.md
+          grep -q . notes.md
+          cat >> notes.md <<'END'
+          Install:
+
+          ```sh
+          npm install -g github:tecolicom/App-ansi2pdf
+          # or
+          brew install tecolicom/tap/app-ansi2pdf
+          ```
+
+          The version is before 1.0, and incompatible changes may be made.
+          END
+          cat notes.md
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$VERSION" --verify-tag \
+              --title "ansi2pdf ${VERSION#v}" --notes-file notes.md
+
+      - name: Have the site rebuilt
+        env:
+          SITE_DISPATCH_TOKEN: ${{ secrets.SITE_DISPATCH_TOKEN }}
+        run: |
+          curl -fsS -X POST \
+              -H "Authorization: Bearer $SITE_DISPATCH_TOKEN" \
+              -H "Accept: application/vnd.github+json" \
+              https://api.github.com/repos/tecolicom/site-www-tecoli-com/dispatches \
+              -d '{"event_type":"site-rebuild"}'
