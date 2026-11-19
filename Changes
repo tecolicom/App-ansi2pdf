@@ -1,5 +1,12 @@
 Revision history for ansi2pdf
 
+0.1.6 2026-11-19T11:51:01Z
+
+    - A border of half blocks around a board of the same color, as
+      --green-board of nup draws, no longer shows a faint seam where
+      it meets the board; a block element in a cell without a
+      background is now painted with the backgrounds of its color
+
 0.1.5 2026-11-11T09:23:38Z
 
     - A kanji with an ideographic variation selector (U+E0100 to
