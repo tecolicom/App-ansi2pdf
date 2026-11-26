@@ -1,5 +1,22 @@
 Revision history for ansi2pdf
 
+0.2.0 2026-11-26T06:13:50Z
+
+    - Images are drawn from the Unicode placeholders of the kitty
+      graphics protocol, whose files a private OSC (7771) tells, as
+      Text::ANSI::Image 0.02 makes them for mdee on paper.  PNG and
+      JPEG are drawn
+    - The widths of characters are those of Unicode 11: emoji are two
+      columns wide, as ansicolumn counts them
+    - The paper may be the shape of a display, as -p 16x9, 4x3 or
+      1920x1080, to be shown on the whole screen; the long side is
+      that of A4
+    - Box drawing lines no longer show seams between the cells in
+      Preview of macOS: the lines of a page are joined and stroked
+      together
+    - The width of lines follows the font size with no lower limit, so
+      that small text does not have thick rules when zoomed in
+
 0.1.6 2026-11-19T11:51:01Z
 
     - A border of half blocks around a board of the same color, as
