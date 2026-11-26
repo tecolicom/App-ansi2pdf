@@ -1,5 +1,12 @@
 Revision history for ansi2pdf
 
+0.2.1 2026-11-26T09:11:21Z
+
+    - The text of a PDF is put pane by pane when the start of each
+      pane is marked by a private OSC (7772), as ansicolumn 1.73
+      --pane-osc does, so that a viewer selects the text of a pane
+      rather than a line across the panes
+
 0.2.0 2026-11-26T06:13:50Z
 
     - Images are drawn from the Unicode placeholders of the kitty
