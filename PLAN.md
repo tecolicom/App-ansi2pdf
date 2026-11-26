@@ -47,6 +47,8 @@
 ### 第3段階：専用プロトコル
 - 端末が無視する OSC で、ページの区切りやファイル名などを伝える。プロトコルがなくても第1段階と同じ結果になること。
 - OSC 8 のハイパーリンクを PDF のリンクにする。
+- 画像（済、2026-11-26）：kitty graphics protocol の Unicode プレースホルダ（U+10EEEE、行と列は結合文字、id は前景色）を、そのセルの位置に PDF の画像として描く。ファイルは OSC 7771（`i=ID,c=COLS,r=ROWS;FILE`）で知らせる。Text::ANSI::Image の `osc` が各行に入れ、mdee が紙のときに使う。結合文字のため xterm.js の Unicode 11 の表を使う。
+  以下は、それより前に考えていた案。
 - 画像（案）：iTerm2 のインライン画像（OSC 1337）や SIXEL を受け取り、受け取った位置に PDF の画像として埋め込む。
   - `@xterm/addon-image` はブラウザの canvas を前提にしているので、headless では `registerOscHandler` などで自分で受け取る。
   - 画像の大きさはセルの数（何桁×何行）で決める約束にし、nup と ansi2pdf で場所の取り方を合わせる。

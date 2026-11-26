@@ -2,6 +2,8 @@
 // Interpret terminal output with headless xterm.js and return a grid of cells.
 
 const { Terminal } = require('@xterm/headless');
+const { Unicode11Addon } = require('@xterm/addon-unicode11');
+const { IMAGE_OSC, handler: imageHandler } = require('./image');
 
 const MAX_COLS = 2000;
 const COLOR_MODE = { 0: 'default', 16777216: 'p16', 33554432: 'p256', 50331648: 'rgb' };
@@ -56,6 +58,12 @@ async function run(input, cols) {
     cols, rows: 24, scrollback: 1e7, convertEol: true, allowProposedApi: true,
     scrollOnEraseInDisplay: true,
   });
+  // The widths of Unicode 11, not 6, the default: emoji are two columns,
+  // as ansicolumn and terminals count them, and the combining characters
+  // added after Unicode 6, which the placeholders of images use, are
+  // combined with the character before them.
+  term.loadAddon(new Unicode11Addon());
+  term.unicode.activeVersion = '11';
   // breaks: { start: row where a new page starts, drop: row to remove }
   const breaks = [];
   term.parser.registerOscHandler(FF_OSC, () => {
@@ -64,6 +72,8 @@ async function run(input, cols) {
     breaks.push({ start: row + 1, drop: buf.cursorX === 0 ? row : null, ff: true });
     return true;
   });
+  term.images = new Map();
+  term.parser.registerOscHandler(IMAGE_OSC, imageHandler(term.images));
   term.parser.registerCsiHandler({ final: 'J' }, (params) => {
     if (params[0] === 3) return true;
     if (params[0] === 2) {
@@ -132,7 +142,7 @@ async function emulate(input, options = {}) {
     prev = { start, ff: b.ff };
   }
   lines = lines.filter((_, row) => !drop.has(row));
-  return { cols, lines, breaks: breaks.filter((r) => r > 0 && r < lines.length) };
+  return { cols, lines, breaks: breaks.filter((r) => r > 0 && r < lines.length), images: term.images };
 }
 
 module.exports = { emulate };

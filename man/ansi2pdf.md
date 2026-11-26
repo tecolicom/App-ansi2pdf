@@ -55,6 +55,21 @@ blank page.  Clearing the screen (**ESC [ 2 J**, as by **clear**(1))
 also starts a new page, keeping what was on the screen before it.
 Clearing the scrollback (**ESC [ 3 J**) is ignored.
 
+Images are drawn from the Unicode placeholders of the kitty graphics
+protocol, as **Text::ANSI::Image** makes them for **mdee**(1) on paper:
+each cell of an image is U+10EEEE with its row and column as combining
+characters and the id of the image as its color.  The file is not in the
+cells: a private OSC before them, which terminals ignore, tells the file
+of an id and its size in cells:
+
+    ESC ] 7771 ; i=ID,c=COLS,r=ROWS ; FILE ESC \
+
+The image is fit into its cells keeping its shape, and a part of the
+rows draws that part of the image.  PNG and JPEG files are drawn; the
+cells of an image whose file is not known or cannot be read are left
+empty.  The widths of characters are those of Unicode 11: emoji are
+two columns wide, as **ansicolumn**(1) counts them.
+
 Files are read in order and concatenated.  Without files, the standard
 input is read.  The PDF is written to the standard output, or to the
 file given by **--output**; it is not written to a terminal.
@@ -92,6 +107,13 @@ file given by **--output**; it is not written to a terminal.
     as **-m**: **a4p:m10** is A4 in portrait with a margin of 10 mm,
     and **a4:m0** is A4 without a margin.  This lets a program give
     how to use the paper in one word, as **nup -T a4p:m10**.
+
+    The shape of a display, *W***x***H*, makes a sheet of that shape,
+    to be shown on the whole screen: **16x9**, **16x10** and **4x3**,
+    or the size in pixels as **1920x1080**, which is the same as
+    **16x9**.  The long side is that of A4, so that the margin and the
+    font size are as on A4.  The orientation is that of the numbers,
+    and the margin may follow, as **16x9:m0**.
 
 **-l**, **--lines** *N*
 :   Number of lines on a logical page.  The font size is chosen to fit
@@ -210,7 +232,8 @@ Output that redraws the whole screen is interpreted on a terminal of 24
 lines, and may differ from what was seen on the real terminal.
 
 Italic is drawn by slanting the regular font.  Rapid blink (**ESC [ 6 m**)
-is ignored.  Images (SIXEL, iTerm2 inline images) are not supported.
+is ignored.  Images other than the placeholders above (SIXEL, iTerm2
+inline images) are not supported.
 
 The default foreground and background are black on white paper.
 Colors of the 16-color palette are those of xterm.js, so white text

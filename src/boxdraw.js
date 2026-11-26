@@ -34,9 +34,59 @@ function isBox(ch) {
   return BOX.has(ch);
 }
 
+// Lines of box characters to be stroked together.  A line drawn cell by
+// cell shows seams at the cell boundaries in some viewers (Preview of
+// macOS), so the segments of the same color and width are kept here,
+// joined where they continue each other, and stroked as one path.
+function lineSet() {
+  const groups = new Map();
+  const EPS = 1e-6;
+  const merge = (segs) => {
+    const out = [], runs = new Map();
+    for (const s of segs) {
+      const [x1, y1, x2, y2] = s;
+      const v = Math.abs(x1 - x2) < EPS, hz = Math.abs(y1 - y2) < EPS;
+      if (!v && !hz) { out.push(s); continue; }
+      const key = (v ? 'v' : 'h') + (v ? x1 : y1).toFixed(4);
+      (runs.get(key) ?? runs.set(key, []).get(key)).push(v ? [y1, y2, x1, v] : [x1, x2, y1, v]);
+    }
+    for (const list of runs.values()) {
+      list.sort((a, b) => a[0] - b[0]);
+      let cur = null;
+      const flush = () => {
+        if (!cur) return;
+        const [a, b, c, v] = cur;
+        out.push(v ? [c, a, c, b] : [a, c, b, c]);
+      };
+      for (const r of list) {
+        if (cur && r[0] <= cur[1] + EPS) cur[1] = Math.max(cur[1], r[1]);
+        else { flush(); cur = [...r]; }
+      }
+      flush();
+    }
+    return out;
+  };
+  return {
+    add(color, width, x1, y1, x2, y2) {
+      const key = `${color} ${width}`;
+      const g = groups.get(key) ?? groups.set(key, { color, width, segs: [] }).get(key);
+      g.segs.push(x1 <= x2 && y1 <= y2 ? [x1, y1, x2, y2] : [x2, y2, x1, y1]);
+    },
+    draw(doc) {
+      for (const { color, width, segs } of groups.values()) {
+        doc.save().strokeColor(color).lineWidth(width).lineCap('butt');
+        for (const [x1, y1, x2, y2] of merge(segs)) doc.moveTo(x1, y1).lineTo(x2, y2);
+        doc.stroke().restore();
+      }
+      groups.clear();
+    },
+  };
+}
+
 // Draw box character ch in the cell (x, y, w, h) with pdfkit doc.
-// lw: light line width.
-function drawBox(doc, ch, x, y, w, h, lw, color) {
+// lw: light line width.  With lines (a lineSet), the solid lines are put
+// in it to be stroked later.
+function drawBox(doc, ch, x, y, w, h, lw, color, lines = null) {
   const box = BOX.get(ch);
   if (!box) return false;
   const [up, right, down, left] = box.arms;
@@ -49,7 +99,9 @@ function drawBox(doc, ch, x, y, w, h, lw, color) {
     doc.dash(len * 0.6, { space: len * 0.4, phase: -len * 0.2 });
   }
   const seg = (x1, y1, x2, y2, weight) => {
-    doc.lineWidth(weight === H ? lw * 2.2 : lw).moveTo(x1, y1).lineTo(x2, y2).stroke();
+    const width = weight === H ? lw * 2.2 : lw;
+    if (lines && !box.dash) lines.add(color, width, x1, y1, x2, y2);
+    else doc.lineWidth(width).moveTo(x1, y1).lineTo(x2, y2).stroke();
   };
   // extension at the center so that perpendicular arms join without a notch
   const ext = (a, b) => (Math.max(a, b) === H ? lw * 1.1 : Math.max(a, b) ? lw / 2 : 0);
@@ -106,4 +158,4 @@ function blockOf(ch) {
   return BLOCK.get(ch) ?? null;
 }
 
-module.exports = { isBox, drawBox, blockOf };
+module.exports = { isBox, drawBox, blockOf, lineSet };

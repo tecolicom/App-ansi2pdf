@@ -2,7 +2,8 @@
 // Render a grid of terminal cells to PDF with pdfkit.
 
 const PDFDocument = require('pdfkit');
-const { isBox, drawBox, blockOf } = require('./boxdraw');
+const { isBox, drawBox, blockOf, lineSet } = require('./boxdraw');
+const { placeholder, drawImages } = require('./image');
 
 const MM = 72 / 25.4;
 const PAPER = {
@@ -16,11 +17,34 @@ const PAPER = {
 // what it is: m for the margin in mm, as a4p:m5.  More of them would be
 // separated by commas.
 const PAPER_PARAMS = { m: 'margin' };
+
+// The shape of a display, as 16x9 or 1920x1080, makes a sheet of that
+// shape to show on the whole screen.  The long side is that of A4, so
+// that the margin and the font size feel as on A4.  The orientation is
+// that of the numbers.
+const DISPLAY = /^(\d+)x(\d+)$/;
+
+// [short side, long side] in points
+function paperSize(name) {
+  const size = String(name || 'a4').toLowerCase();
+  const px = size.match(DISPLAY);
+  if (px) {
+    const [s, l] = [Number(px[1]), Number(px[2])].sort((a, b) => a - b);
+    const long = PAPER.a4[1];
+    return [long * (s / l), long];
+  }
+  return PAPER[size] ?? PAPER.a4;
+}
 function parsePaper(name) {
   const [size, params, ...rest] = String(name).toLowerCase().split(':');
   if (rest.length) return null;
   const spec = { paper: size, landscape: undefined, margin: undefined };
-  if (!PAPER[size]) {
+  const px = size.match(DISPLAY);
+  if (px) {
+    const [w, h] = [Number(px[1]), Number(px[2])];
+    if (!w || !h) return null;
+    if (w !== h) spec.landscape = w > h;
+  } else if (!PAPER[size]) {
     const m = size.match(/^(.+?)-?([pl])$/);
     if (!m || !PAPER[m[1]]) return null;
     spec.paper = m[1];
@@ -87,7 +111,7 @@ function parsePane(v) {
 function sheetLayout(opt) {
   const [gc, gr] = parsePane(opt.pane ?? 1);
   const land = opt.landscape ?? gc > gr;
-  let [w, h] = PAPER[(opt.paper || 'a4').toLowerCase()] ?? PAPER.a4;
+  let [w, h] = paperSize(opt.paper);
   if (land) [w, h] = [h, w];
   return { gc, gr, size: [w, h] };
 }
@@ -152,7 +176,8 @@ function layout(doc, opt) {
   }
   return {
     size: [pw, ph], slots, fs, cw, ch, cols, perPage,
-    lw: Math.max(0.3, fs * 0.07),
+    // lines keep the thickness to the characters, also when zoomed in
+    lw: fs * 0.07,
     base: (ch - boxH) / 2 + ascender * fs / 1000,     // baseline offset in a cell
   };
 }
@@ -169,7 +194,7 @@ function geometry(opt) {
   const doc = new PDFDocument({ autoFirstPage: false });
   register(doc, 'R', opt.font);
   const L = layout(doc, opt);
-  return { cols: L.cols, lines: L.perPage };
+  return { cols: L.cols, lines: L.perPage, lineWidth: L.lw };
 }
 
 // Choose the font for a character: the main font if it has the glyph,
@@ -225,6 +250,7 @@ function render(screen, out, opt = {}) {
 
   const L = layout(doc, opt);
   L.fonts = fonts;
+  L.images = screen.images ?? new Map();
   const pages = paginate(screen, L.perPage);
   const total = pages.length;
   for (let n = 0; n < total; n++) {
@@ -300,10 +326,13 @@ function drawPage(doc, page, origin, L) {
       doc.fill(color);
     }
   }
+  // images over the backgrounds; their cells are not drawn as text
+  drawImages(doc, page, L.images, origin, L);
+  m.lines = lineSet();
   page.forEach((cells, row) => {
     const y = origin.y + row * L.ch;
     cells.forEach((cell, col) => {
-      if (cell.width === 0) return;
+      if (cell.width === 0 || placeholder(cell)) return;
       // A glyph wider than its cell may extend over a no-break space next to
       // it, which keeps the room for an ambiguous-width character (as the
       // widen theme of mdee does).
@@ -312,6 +341,7 @@ function drawPage(doc, page, origin, L) {
       drawCell(doc, cell, origin.x + col * L.cw, y, L.cw * cell.width, m, room);
     });
   });
+  m.lines.draw(doc);
 }
 
 function drawHeader(doc, h, left, right) {
@@ -326,7 +356,7 @@ function drawCell(doc, cell, x, y, w, m, room = 0) {
   const { fg } = colors(cell);
   const text = cell.ch;
   if (text && text !== ' ' && !cell.invisible && !blockOf(text)) {
-    if (!(isBox(text) && drawBox(doc, text, x, y, w, m.ch, m.lw, fg))) {
+    if (!(isBox(text) && drawBox(doc, text, x, y, w, m.ch, m.lw, fg, m.lines))) {
       drawGlyph(doc, cell, text, x, y, w, m, fg, room);
     }
   }
@@ -393,4 +423,4 @@ function drawUnderline(doc, style, x, y, w, lw, color) {
   doc.restore();
 }
 
-module.exports = { render, geometry, parsePaper, PAPER, fills };
+module.exports = { render, geometry, parsePaper, paperSize, PAPER, fills };

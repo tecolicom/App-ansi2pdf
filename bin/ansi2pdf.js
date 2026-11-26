@@ -18,7 +18,8 @@ const USAGE = `Usage: ansi2pdf [options] [file ...] > out.pdf
   -p, --paper NAME       paper size: ${Object.keys(PAPER).join(', ')} (default: a4);
                          p or l after the name gives the orientation, as
                          a4p for portrait, a4l or letter-l for landscape;
-                         :mN after them gives the margin, as a4p:m10
+                         :mN after them gives the margin, as a4p:m10;
+                         WxH is the shape of a display, as 16x9 or 1920x1080
   -L, --landscape        landscape orientation
   -P, --portrait         portrait orientation
                          (default: landscape when -C has more columns than rows;

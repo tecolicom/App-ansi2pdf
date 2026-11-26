@@ -48,7 +48,8 @@ test('lines, width and font size', { skip: !FONT && 'font not found' }, () => {
   const narrow = g({ width: Math.floor(base.cols / 2) });
   assert.ok(narrow.lines < 60);
   // both are kept
-  assert.deepStrictEqual(g({ width: 300, lines: 20 }), { cols: 300, lines: 20 });
+  const both = g({ width: 300, lines: 20 });
+  assert.deepStrictEqual([both.cols, both.lines], [300, 20]);
   // the lines and the columns follow the font size
   const big = g({ fontSize: 12 }), small = g({ fontSize: 6 });
   assert.ok(big.lines < small.lines && big.cols < small.cols);
@@ -106,6 +107,29 @@ test('paper name with orientation', () => {
   for (const name of ['a9', 'a4r', 'a4-', 'p', 'a4pl', '', 'a4:', 'a4:5', 'a4:m', 'a4:mx', 'a4:m5,', 'a4:x5', ':m5', 'a4:m5:m3']) {
     assert.strictEqual(parsePaper(name), null, name);
   }
+});
+
+test('lines are as thick to the characters at any size', { skip: !FONT && 'font not found' }, () => {
+  const { geometry } = require('../src/render');
+  const ratio = (fontSize) => geometry({ font: FONT, fontSize }).lineWidth / fontSize;
+  assert.ok(Math.abs(ratio(1.5) - ratio(10)) < 1e-9, `${ratio(1.5)} ${ratio(10)}`);
+});
+
+test('the shape of a display', () => {
+  const { parsePaper, paperSize } = require('../src/render');
+  const P = (paper, landscape, margin) => ({ paper, landscape, margin });
+  assert.deepStrictEqual(parsePaper('16x9'), P('16x9', true));
+  assert.deepStrictEqual(parsePaper('1080X1920'), P('1080x1920', false));
+  assert.deepStrictEqual(parsePaper('1x1'), P('1x1'));
+  assert.deepStrictEqual(parsePaper('16x9:m0'), P('16x9', true, 0));
+  for (const name of ['0x9', '16x', 'x9', '16x9l', '16x9p']) {
+    assert.strictEqual(parsePaper(name), null, name);
+  }
+  // the long side is that of A4, short side first as a paper
+  assert.deepStrictEqual(paperSize('16x9'), [841.89 * (9 / 16), 841.89]);
+  assert.deepStrictEqual(paperSize('1920x1080'), paperSize('16x9'));
+  assert.deepStrictEqual(paperSize('3x4'), [841.89 * (3 / 4), 841.89]);
+  assert.deepStrictEqual(paperSize('a4'), [595.28, 841.89]);
 });
 
 test('the last of -L, -P and the paper decides the orientation', { skip: !FONT && 'font not found' }, () => {
