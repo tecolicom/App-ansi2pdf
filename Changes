@@ -1,6 +1,6 @@
 Revision history for ansi2pdf
 
-0.2.1 2026-11-26T09:11:21Z
+0.3.0 2026-11-26T09:20:38Z
 
     - The text of a PDF is put pane by pane when the start of each
       pane is marked by a private OSC (7772), as ansicolumn 1.73
