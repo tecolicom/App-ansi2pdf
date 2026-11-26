@@ -70,6 +70,17 @@ cells of an image whose file is not known or cannot be read are left
 empty.  The widths of characters are those of Unicode 11: emoji are
 two columns wide, as **ansicolumn**(1) counts them.
 
+The text is put in the PDF line by line, which is the order a viewer
+selects and copies it in.  Text laid out in panes, as by **nup**(1),
+is put pane by pane instead, when the start of each pane is marked by
+a private OSC, as **ansicolumn --pane-osc** does:
+
+    ESC ] 7772 ; ESC \
+
+A pane is from its mark to the next mark on the same line, and down
+to the next line with marks.  Then the text of a pane is selected as
+a whole.
+
 Files are read in order and concatenated.  Without files, the standard
 input is read.  The PDF is written to the standard output, or to the
 file given by **--output**; it is not written to a terminal.

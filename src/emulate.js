@@ -48,6 +48,7 @@ function write(term, data) {
 // the row where it is.  A new page starts at the next row.  When FF is at
 // the beginning of a line, the line it leaves empty is dropped.
 const FF_OSC = 7770;
+const PANE_OSC = 7772;
 
 // Clearing the screen (ED2, \e[2J) also starts a new page: what was on
 // the screen is pushed up and kept (scrollOnEraseInDisplay), and the new
@@ -74,6 +75,14 @@ async function run(input, cols) {
   });
   term.images = new Map();
   term.parser.registerOscHandler(IMAGE_OSC, imageHandler(term.images));
+  // The start of a pane, as ansicolumn --pane-osc tells it: the cell
+  // where the text of the pane starts, which the cursor is on.
+  term.paneStarts = [];
+  term.parser.registerOscHandler(PANE_OSC, () => {
+    const buf = term.buffer.active;
+    term.paneStarts.push([buf.baseY + buf.cursorY, buf.cursorX]);
+    return true;
+  });
   term.parser.registerCsiHandler({ final: 'J' }, (params) => {
     if (params[0] === 3) return true;
     if (params[0] === 2) {
@@ -128,6 +137,12 @@ async function emulate(input, options = {}) {
   }
   const term = await run(input, cols);
   let lines = grid(term);
+  // the starts of the panes go with their cells, which the rows
+  // dropped below and the pages move
+  for (const [row, col] of term.paneStarts) {
+    const cell = lines[row]?.[col];
+    if (cell) cell.paneStart = true;
+  }
   // drop the rows left empty by form feeds, and find where pages start
   const drop = new Set(term.breaks.filter((b) => b.drop !== null).map((b) => b.drop));
   const dropped = (row) => [...drop].filter((r) => r < row).length;

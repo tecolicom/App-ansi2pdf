@@ -312,6 +312,35 @@ function fills(cells, row, origin, L, backgrounds = new Map(), blocks = new Map(
   return { backgrounds, blocks };
 }
 
+// The cells of a page, as [row, column], in the order their text is
+// drawn.  The text order of a PDF is the order a viewer selects and
+// copies it in, so the text of the panes whose starts ansicolumn
+// --pane-osc marks is drawn pane by pane: a row of panes after another,
+// and in a row of panes, the panes from the left.  A pane is the cells
+// from its start to the start of the next pane on the same line, and
+// down to the next row of panes; the cells before the first ones (the
+// borders) come first.  Without the starts, line by line.
+function readingOrder(page) {
+  const starts = [];
+  page.forEach((cells, r) => cells.forEach((c, x) => { if (c.paneStart) starts.push([r, x]); }));
+  // the first lines of the rows of panes, and the first columns of
+  // the panes in each
+  const paneRows = [...new Set(starts.map(([r]) => r))];
+  const paneCols = paneRows.map((pr) => starts.filter(([r]) => r === pr).map(([, x]) => x));
+  // the index of the last item not greater than v, or -1
+  const at = (list, v) => list.reduce((i, w, j) => (w <= v ? j : i), -1);
+  const panes = new Map();
+  page.forEach((cells, r) => cells.forEach((_, x) => {
+    const pr = at(paneRows, r);
+    const pc = pr < 0 ? -1 : at(paneCols[pr], x);
+    const key = `${pr},${pc}`;
+    (panes.get(key) ?? panes.set(key, { pr, pc, cells: [] }).get(key)).cells.push([r, x]);
+  }));
+  return [...panes.values()]
+    .sort((a, b) => a.pr - b.pr || a.pc - b.pc)
+    .flatMap((p) => p.cells);
+}
+
 function drawPage(doc, page, origin, L) {
   const m = { fs: L.fs, ch: L.ch, lw: L.lw, base: L.base, fonts: L.fonts };
   // Backgrounds first, so that glyphs and lines are drawn over them, then
@@ -329,18 +358,16 @@ function drawPage(doc, page, origin, L) {
   // images over the backgrounds; their cells are not drawn as text
   drawImages(doc, page, L.images, origin, L);
   m.lines = lineSet();
-  page.forEach((cells, row) => {
-    const y = origin.y + row * L.ch;
-    cells.forEach((cell, col) => {
-      if (cell.width === 0 || placeholder(cell)) return;
-      // A glyph wider than its cell may extend over a no-break space next to
-      // it, which keeps the room for an ambiguous-width character (as the
-      // widen theme of mdee does).
-      const next = cells[col + cell.width];
-      const room = next && next.width === 1 && next.ch === '\u00a0' ? L.cw : 0;
-      drawCell(doc, cell, origin.x + col * L.cw, y, L.cw * cell.width, m, room);
-    });
-  });
+  for (const [row, col] of readingOrder(page)) {
+    const cells = page[row], cell = cells[col];
+    if (cell.width === 0 || placeholder(cell)) continue;
+    // A glyph wider than its cell may extend over a no-break space next to
+    // it, which keeps the room for an ambiguous-width character (as the
+    // widen theme of mdee does).
+    const next = cells[col + cell.width];
+    const room = next && next.width === 1 && next.ch === '\u00a0' ? L.cw : 0;
+    drawCell(doc, cell, origin.x + col * L.cw, origin.y + row * L.ch, L.cw * cell.width, m, room);
+  }
   m.lines.draw(doc);
 }
 
@@ -423,4 +450,4 @@ function drawUnderline(doc, style, x, y, w, lw, color) {
   doc.restore();
 }
 
-module.exports = { render, geometry, parsePaper, paperSize, PAPER, fills };
+module.exports = { render, geometry, parsePaper, paperSize, PAPER, fills, readingOrder };
