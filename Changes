@@ -1,5 +1,15 @@
 Revision history for ansi2pdf
 
+0.3.1 2026-11-28T11:13:05Z
+
+    - The characters of a line are put in strings rather than one by
+      one, which makes a PDF much smaller: a sheet of mdee goes from
+      864K to 566K, looking the same
+    - A character narrower than its cell, as of a fallback font, is
+      put in the middle of the cell rather than on the left
+    - Underlines are drawn as one line over the cells, so that dotted
+      and dashed ones keep their pattern
+
 0.3.0 2026-11-26T09:20:38Z
 
     - The text of a PDF is put pane by pane when the start of each
