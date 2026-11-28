@@ -178,3 +178,33 @@ test('block elements join the background of their color', async () => {
   assert.deepStrictEqual([...blocks.keys()].length, 1);
   assert.deepStrictEqual([...blocks.values()][0].map((r) => r.slice(0, 2)), [[50, 10]]);
 });
+
+test('glyphs next to each other are drawn in a string', () => {
+  const { glyphRuns } = require('../src/render');
+  const g = (col, o = {}) => ({ row: 0, col, width: 1, font: 'R', fg: '#000000', italic: false,
+                                sx: 1, tc: 0, single: false, ...o });
+  const cols = (runs) => runs.map((r) => r.map((x) => x.col));
+  // wide and narrow glyphs that fit their cells go together
+  assert.deepStrictEqual(cols(glyphRuns([g(0), g(1, { width: 2 }), g(3)])), [[0, 1, 3]]);
+  // a gap, another line, color, font, slant, placing and a single glyph break a string
+  assert.deepStrictEqual(cols(glyphRuns([g(0), g(2)])), [[0], [2]]);
+  assert.deepStrictEqual(cols(glyphRuns([g(0), g(1, { row: 1 })])), [[0], [1]]);
+  assert.deepStrictEqual(cols(glyphRuns([g(0), g(1, { fg: '#ff0000' })])), [[0], [1]]);
+  assert.deepStrictEqual(cols(glyphRuns([g(0), g(1, { font: 'B' })])), [[0], [1]]);
+  assert.deepStrictEqual(cols(glyphRuns([g(0), g(1, { italic: true })])), [[0], [1]]);
+  assert.deepStrictEqual(cols(glyphRuns([g(0), g(1, { sx: 0.8 })])), [[0], [1]]);
+  assert.deepStrictEqual(cols(glyphRuns([g(0, { tc: 1 }), g(1, { tc: 1 }), g(2, { width: 2, tc: 2 })])),
+                         [[0, 1], [2]]);
+  assert.deepStrictEqual(cols(glyphRuns([g(0), g(1, { single: true }), g(2)])), [[0], [1], [2]]);
+});
+
+test('underlines that touch are joined', () => {
+  const { joinUnderlines } = require('../src/render');
+  const u = (x, o = {}) => ({ style: 1, color: '#000000', x, y: 10, w: 5, ...o });
+  const spans = (list) => joinUnderlines(list).map((s) => [s.x, s.w]);
+  assert.deepStrictEqual(spans([u(5), u(0), u(10, { w: 10 })]), [[0, 20]]);
+  assert.deepStrictEqual(spans([u(0), u(6)]), [[0, 5], [6, 5]]);
+  assert.deepStrictEqual(spans([u(0), u(5, { color: '#ff0000' })]), [[0, 5], [5, 5]]);
+  assert.deepStrictEqual(spans([u(0), u(5, { style: 3 })]), [[0, 5], [5, 5]]);
+  assert.deepStrictEqual(spans([u(0), u(5, { y: 30 })]), [[0, 5], [5, 5]]);
+});

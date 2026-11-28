@@ -358,6 +358,9 @@ function drawPage(doc, page, origin, L) {
   // images over the backgrounds; their cells are not drawn as text
   drawImages(doc, page, L.images, origin, L);
   m.lines = lineSet();
+  m.glyphs = [];
+  m.decorations = [];
+  m.underlines = [];
   for (const [row, col] of readingOrder(page)) {
     const cells = page[row], cell = cells[col];
     if (cell.width === 0 || placeholder(cell)) continue;
@@ -366,8 +369,14 @@ function drawPage(doc, page, origin, L) {
     // widen theme of mdee does).
     const next = cells[col + cell.width];
     const room = next && next.width === 1 && next.ch === '\u00a0' ? L.cw : 0;
-    drawCell(doc, cell, origin.x + col * L.cw, origin.y + row * L.ch, L.cw * cell.width, m, room);
+    drawCell(doc, cell, origin.x + col * L.cw, origin.y + row * L.ch, L.cw * cell.width, m, room,
+             row, col);
   }
+  for (const run of glyphRuns(m.glyphs)) drawRun(doc, run, m);
+  for (const u of joinUnderlines(m.underlines)) {
+    drawUnderline(doc, u.style, u.x, u.y, u.w, m.lw, u.color);
+  }
+  for (const f of m.decorations) f();
   m.lines.draw(doc);
 }
 
@@ -379,23 +388,27 @@ function drawHeader(doc, h, left, right) {
   doc.restore();
 }
 
-function drawCell(doc, cell, x, y, w, m, room = 0) {
+// The glyph of a cell is not drawn here but put in m.glyphs, to be drawn
+// in strings with the glyphs next to it (see glyphRuns), and the lines
+// over the cell are put in m.underlines and m.decorations, to be drawn
+// over the text.
+function drawCell(doc, cell, x, y, w, m, room, row, col) {
   const { fg } = colors(cell);
   const text = cell.ch;
   if (text && text !== ' ' && !cell.invisible && !blockOf(text)) {
     if (!(isBox(text) && drawBox(doc, text, x, y, w, m.ch, m.lw, fg, m.lines))) {
-      drawGlyph(doc, cell, text, x, y, w, m, fg, room);
+      m.glyphs.push(placeGlyph(doc, cell, text, x, y, w, m, fg, room, row, col));
     }
   }
   const line = (yy, color, width) => {
     doc.save().lineWidth(width).strokeColor(color).moveTo(x, yy).lineTo(x + w, yy).stroke().restore();
   };
   if (cell.underline) {
-    drawUnderline(doc, cell.underline, x, y + m.base + m.fs * 0.15, w, m.lw,
-                  resolve(cell.ulcolor) ?? fg);
+    const color = resolve(cell.ulcolor) ?? fg;
+    m.underlines.push({ style: cell.underline, color, x, y: y + m.base + m.fs * 0.15, w });
   }
-  if (cell.strike) line(y + m.base - m.fs * 0.3, fg, m.lw);
-  if (cell.overline) line(y + m.lw, fg, m.lw);
+  if (cell.strike) m.decorations.push(() => line(y + m.base - m.fs * 0.3, fg, m.lw));
+  if (cell.overline) m.decorations.push(() => line(y + m.lw, fg, m.lw));
 }
 
 // Glyphs narrower than this ratio of the room are shrunk keeping the shape,
@@ -403,14 +416,99 @@ function drawCell(doc, cell, x, y, w, m, room = 0) {
 const MIN_SQUEEZE = 0.75;
 const OVERFLOW = 1.2;
 
-function drawGlyph(doc, cell, text, x, y, w, m, fg, room = 0) {
-  doc.font(m.fonts.pick(text, cell.bold)).fontSize(m.fs).fillColor(fg);
+// How to place the glyph of a cell.  A glyph that fits the cell, or is a
+// little wider, is drawn in a string with the glyphs next to it: one as
+// wide as the cell is put as it is, one narrower has the difference added
+// after it as the character spacing (tc), and is moved by the half of it
+// to the middle of the cell (as drawGlyph does), and one a little wider is
+// put from the left of the cell with a negative tc, or squeezed
+// horizontally to the cell (sx).  The glyphs of a string have the same
+// sx and tc, so each of them comes to its cell.  Others are drawn one by
+// one (single): a glyph much wider than the cell, one that may extend
+// over the room next to it, and a cell of more than one character.
+function placeGlyph(doc, cell, text, x, y, w, m, fg, room, row, col) {
+  const font = m.fonts.pick(text, cell.bold);
+  doc.font(font).fontSize(m.fs);
+  const adv = doc.widthOfString(text);
+  const g = { row, col, width: cell.width, cell, text, font, fg, italic: !!cell.italic,
+              x, y, w, room, sx: 1, tc: 0, single: false };
+  if (room || [...text].length !== 1) g.single = true;
+  else if (adv <= w * 1.01) g.tc = w - adv;
+  else if (adv * MIN_SQUEEZE <= w) g.sx = w / adv;
+  else g.single = true;
+  return g;
+}
+
+// Group glyphs, given in the order of drawing, into strings: the ones
+// next to each other in a line, with the same font, color, slant and
+// placing (sx and tc).  A wide and a narrow glyph may be in a string when
+// their tc is the same, as it is when they fit their cells exactly.
+const EPS = 1e-6;
+function glyphRuns(glyphs) {
+  const runs = [];
+  let run = null;
+  for (const g of glyphs) {
+    const p = run?.[run.length - 1];
+    if (p && !p.single && !g.single && p.row === g.row && p.col + p.width === g.col
+        && p.font === g.font && p.fg === g.fg && p.italic === g.italic
+        && Math.abs(p.sx - g.sx) < EPS && Math.abs(p.tc - g.tc) < EPS) {
+      run.push(g);
+    } else {
+      runs.push(run = [g]);
+    }
+  }
+  return runs;
+}
+
+// Whether the glyphs of a string are shaped as each of them alone: the
+// same glyphs, without kerning or offsets.  A ligature or a contextual
+// form would not keep the glyphs in their cells.
+function shapedAlone(doc, run) {
+  if (run.length === 1) return true;
+  doc.font(run[0].font).fontSize(1000);
+  const font = doc._font;
+  const { glyphs, positions } = font.layout(run.map((g) => g.text).join(''));
+  if (glyphs.length !== run.length) return false;
+  return glyphs.every((glyph, i) => {
+    const p = positions[i];
+    return !p.xOffset && !p.yOffset && Math.abs(p.xAdvance - p.advanceWidth) < EPS
+      && glyph.id === font.layout(run[i].text).glyphs[0]?.id;
+  });
+}
+
+function drawRun(doc, run, m) {
+  const g = run[0];
+  if (g.single) {
+    drawGlyph(doc, g.cell, g.text, g.x, g.y, g.w, m, g.fg, g.room, g.font);
+    return;
+  }
+  if (!shapedAlone(doc, run)) {
+    for (const one of run) drawRun(doc, [one], m);
+    return;
+  }
+  doc.font(g.font).fontSize(m.fs).fillColor(g.fg);
+  const skew = g.italic ? 0.2 : 0;
+  doc.save();
+  // origin at the baseline, a narrow glyph in the middle of the cell
+  doc.transform(g.sx, 0, -skew, 1, g.x + Math.max(0, g.tc) * g.sx / 2, g.y + m.base);
+  doc.text(run.map((r) => r.text).join(''), 0, 0, {
+    lineBreak: false, baseline: 'alphabetic',
+    characterSpacing: Math.abs(g.tc) < EPS ? 0 : g.tc,
+  });
+  doc.restore();
+}
+
+function drawGlyph(doc, cell, text, x, y, w, m, fg, room = 0,
+                   font = m.fonts.pick(text, cell.bold)) {
+  doc.font(font).fontSize(m.fs).fillColor(fg);
   const adv = doc.widthOfString(text);
   const avail = w + room;
   const skew = cell.italic ? 0.2 : 0;
   doc.save();
   if (adv <= avail * 1.01) {
-    doc.transform(1, 0, -skew, 1, x, y + m.base);   // origin at the baseline
+    // origin at the baseline, a glyph narrower than the cell in the middle
+    // of it, as in a string (the room is not for a narrow glyph)
+    doc.transform(1, 0, -skew, 1, x + Math.max(0, w - adv) / 2, y + m.base);
   } else if (adv * MIN_SQUEEZE <= avail) {
     // a little wider than the room: squeeze horizontally
     doc.transform(avail / adv, 0, -skew, 1, x, y + m.base);
@@ -426,6 +524,27 @@ function drawGlyph(doc, cell, text, x, y, w, m, fg, room = 0) {
   }
   doc.text(text, 0, 0, { lineBreak: false, baseline: 'alphabetic' });
   doc.restore();
+}
+
+// Join the underlines of the same style and color that touch each other
+// in a line, to draw them as one: a dotted, dashed or curly line keeps
+// its pattern over the cells, and the line is drawn once.
+function joinUnderlines(list) {
+  const groups = new Map();
+  for (const u of list) {
+    const key = `${u.style} ${u.color} ${u.y.toFixed(4)}`;
+    (groups.get(key) ?? groups.set(key, []).get(key)).push(u);
+  }
+  const out = [];
+  for (const g of groups.values()) {
+    g.sort((a, b) => a.x - b.x);
+    let cur = null;
+    for (const u of g) {
+      if (cur && u.x <= cur.x + cur.w + EPS) cur.w = Math.max(cur.w, u.x + u.w - cur.x);
+      else out.push(cur = { ...u });
+    }
+  }
+  return out;
 }
 
 // style: 1 single, 2 double, 3 curly, 4 dotted, 5 dashed
@@ -450,4 +569,6 @@ function drawUnderline(doc, style, x, y, w, lw, color) {
   doc.restore();
 }
 
-module.exports = { render, geometry, parsePaper, paperSize, PAPER, fills, readingOrder };
+module.exports = {
+  render, geometry, parsePaper, paperSize, PAPER, fills, readingOrder, glyphRuns, joinUnderlines,
+};
